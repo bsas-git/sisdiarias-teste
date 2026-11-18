@@ -1,0 +1,3053 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SisDiárias — Gestão de Diárias Corporativas</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --brand-primary: #1d4ed8;
+      --brand-primary-hover: #1e40af;
+      --brand-primary-light: #eff6ff;
+      --brand-primary-border: #bfdbfe;
+      --brand-accent: #f59e0b;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* Dynamic White-Label Theme Utilities */
+    .bg-brand { background-color: var(--brand-primary) !important; }
+    .hover\:bg-brand-dark:hover { background-color: var(--brand-primary-hover) !important; }
+    .bg-brand-soft { background-color: var(--brand-primary-light) !important; }
+    .text-brand { color: var(--brand-primary) !important; }
+    .border-brand { border-color: var(--brand-primary) !important; }
+    .border-brand-soft { border-color: var(--brand-primary-border) !important; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Official Print Layout */
+    @media print {
+      body * { visibility: hidden; }
+      #voucher-print-area, #voucher-print-area * { visibility: visible; }
+      #voucher-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-[120] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. TELA DE LOGIN + AUTOATENDIMENTO DE SENHA                           -->
+  <!-- ===================================================================== -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div class="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-700/30">
+      
+      <!-- Lado Esquerdo: Identidade Institucional -->
+      <div class="lg:col-span-5 bg-brand text-white p-8 flex flex-col justify-between relative overflow-hidden">
+        <div class="relative z-10 space-y-4">
+          <div id="auth-logo-container" class="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center border border-white/20">
+            <i data-lucide="route" class="w-8 h-8 text-amber-300"></i>
+          </div>
+          <div>
+            <span class="inline-block text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/15 text-amber-300 mb-2">
+              Portal Corporativo • Alagoas
+            </span>
+            <h1 id="auth-system-name" class="text-2xl font-extrabold tracking-tight">SisDiárias</h1>
+            <p id="auth-company-name" class="text-xs text-white/80 mt-1">Companhia de Infraestrutura e Serviços de Alagoas S/A</p>
+          </div>
+          <p class="text-xs text-white/85 leading-relaxed pt-2">
+            Substituição integral de planilhas de diárias com cálculo automático por município, controle de abastecimento extra, matriz RBAC de permissões e assinatura eletrônica auditável.
+          </p>
+        </div>
+
+        <div class="relative z-10 pt-8 border-t border-white/15 text-[11px] text-white/75 space-y-1">
+          <div id="auth-company-cnpj">CNPJ: 12.345.678/0001-99</div>
+          <div id="auth-company-address">Av. Fernandes Lima, 1200 — Farol, Maceió/AL</div>
+        </div>
+      </div>
+
+      <!-- Lado Direito: Login e Autoatendimento -->
+      <div class="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between">
+        <div>
+          <!-- Abas Login / Gerar Senha -->
+          <div class="flex p-1 rounded-2xl bg-slate-100 mb-6">
+            <button type="button" onclick="switchAuthTab('login')" id="auth-tab-login" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition bg-white text-slate-900 shadow-xs">
+              Acessar Sistema
+            </button>
+            <button type="button" onclick="switchAuthTab('selfservice')" id="auth-tab-selfservice" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">
+              Gerar / Redefinir Minha Senha
+            </button>
+          </div>
+
+          <!-- Formulário de Login -->
+          <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+            <div>
+              <label for="login-username" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Login ou CPF *</label>
+              <input type="text" id="login-username" required autocomplete="username" placeholder="Digite seu login ou CPF" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+
+            <div>
+              <label for="login-password" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Senha Pessoal *</label>
+              <input type="password" id="login-password" required autocomplete="current-password" placeholder="Digite sua senha" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+
+            <button type="submit" class="w-full py-3 px-4 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-bold shadow-lg transition flex items-center justify-center gap-2">
+              <i data-lucide="log-in" class="w-4 h-4"></i>
+              <span>Entrar no SisDiárias</span>
+            </button>
+
+            <!-- Rodapé Discreto de Homologação (Sem botões de login automático) -->
+            <div class="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span class="inline-flex items-center gap-1.5 font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                <i data-lucide="flask-conical" class="w-3.5 h-3.5 text-amber-600"></i>
+                Ambiente de Homologação • Etapa 1
+              </span>
+              <button type="button" onclick="openCredentialsModal()" class="text-brand hover:underline font-semibold flex items-center gap-1">
+                <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+                <span>Credenciais Iniciais de Teste</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Formulário de Autoatendimento (Usuário gera sua própria senha validando dados cadastrais) -->
+          <form id="selfservice-form" onsubmit="handleSelfServicePassword(event)" class="hidden space-y-3.5">
+            <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+              Por segurança, informe seu <strong>CPF</strong>, <strong>Agência</strong> e <strong>Número da Conta</strong> exatamente como constam no RH para gerar sua senha pessoal.
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">CPF *</label>
+                <input type="text" id="ss-cpf" placeholder="032.751.874-06" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Agência *</label>
+                <input type="text" id="ss-agencia" placeholder="1601-2" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nº Conta *</label>
+                <input type="text" id="ss-conta" placeholder="33084-1" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nova Senha *</label>
+                <input type="password" id="ss-new-pass" minlength="4" required placeholder="Mínimo 4 caracteres" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Confirmar Nova Senha *</label>
+                <input type="password" id="ss-confirm-pass" minlength="4" required placeholder="Repita a senha" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition">
+              Validar Dados e Salvar Minha Senha
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. APLICAÇÃO PRINCIPAL (SIDEBAR + TOPBAR + VIEWS)                     -->
+  <!-- ===================================================================== -->
+  <div id="app-shell" class="hidden min-h-screen flex flex-col">
+
+    <!-- Faixa Superior de Identificação do Ambiente de Homologação -->
+    <div class="bg-slate-900 text-white border-b border-slate-800 px-4 py-2 sticky top-0 z-40">
+      <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider">
+            Ambiente de Homologação • Piloto Etapa 1
+          </span>
+          <span class="text-[11px] text-slate-300 hidden sm:inline">
+            Acesso autenticado via usuário/senha • Persistência local automática ativa
+          </span>
+        </div>
+        <div class="flex items-center gap-2 text-[11px] text-emerald-300 font-semibold">
+          <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+          <span>Base salva automaticamente no navegador</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 flex relative">
+      <!-- Backdrop Mobile Sidebar -->
+      <div id="sidebar-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden"></div>
+
+      <!-- Sidebar Lateral -->
+      <aside id="app-sidebar" class="fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 flex flex-col justify-between transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+        <div class="p-4 space-y-5 overflow-y-auto">
+          <!-- Brand Header -->
+          <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+              <div id="sidebar-logo-box" class="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                <i data-lucide="route" class="w-5 h-5 text-amber-300"></i>
+              </div>
+              <div class="min-w-0">
+                <div id="sidebar-system-name" class="text-sm font-extrabold text-slate-900 truncate">SisDiárias</div>
+                <div id="sidebar-company-short" class="text-[10px] text-slate-500 truncate">Infraestrutura AL</div>
+              </div>
+            </div>
+            <button type="button" onclick="toggleMobileSidebar(false)" class="lg:hidden p-1.5 text-slate-400 hover:text-slate-700">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Menu Dinâmico Baseado na Matriz RBAC -->
+          <nav id="sidebar-nav" class="space-y-1">
+            <!-- Populated via JS -->
+          </nav>
+        </div>
+
+        <!-- Rodapé do Usuário Logado -->
+        <div class="p-4 border-t border-slate-200 bg-slate-50/80 space-y-3">
+          <div class="flex items-center gap-2.5">
+            <div id="sidebar-user-avatar" class="w-9 h-9 rounded-full bg-brand text-white text-xs font-extrabold flex items-center justify-center shrink-0">AD</div>
+            <div class="min-w-0 flex-1">
+              <div id="sidebar-user-name" class="text-xs font-bold text-slate-900 truncate">Usuário</div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <span id="sidebar-user-role" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-soft text-brand uppercase">Perfil</span>
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="logout()" class="w-full py-2 px-3 rounded-xl border border-slate-300 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-xs font-bold text-slate-700 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Sair do Sistema</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Área Central de Conteúdo -->
+      <div class="flex-1 flex flex-col min-w-0">
+        <!-- Sub-Header Mobile / Breadcrumb -->
+        <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="toggleMobileSidebar(true)" class="lg:hidden p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50">
+              <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <div>
+              <h1 id="page-title" class="text-base sm:text-lg font-extrabold text-slate-900">Nova Solicitação de Diária</h1>
+              <p id="page-subtitle" class="text-xs text-slate-500">Preencha o roteiro, veículo e adicional de combustível</p>
+            </div>
+          </div>
+
+          <div class="hidden sm:flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-amber-950">
+            <i data-lucide="fuel" class="w-4 h-4 text-amber-600"></i>
+            <span>Cota Combustível Vigente: <strong id="header-fuel-rate">R$ 100,00</strong></span>
+          </div>
+        </header>
+
+        <!-- Container das Views -->
+        <main class="flex-1 p-4 sm:p-6 max-w-[1440px] w-full mx-auto space-y-6">
+
+          <!-- ============================================================= -->
+          <!-- VIEW 1: DASHBOARD EXECUTIVO                                   -->
+          <!-- ============================================================= -->
+          <section id="view-dashboard" class="hidden space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" id="dashboard-kpis"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                <h3 class="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+                  <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand"></i> Investimento por Setor Solicitante
+                </h3>
+                <div id="dashboard-sector-bars" class="space-y-3"></div>
+              </div>
+
+              <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                <h3 class="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+                  <i data-lucide="map-pin" class="w-4 h-4 text-brand"></i> Destinos Mais Frequentes (AL)
+                </h3>
+                <div id="dashboard-top-cities" class="space-y-2.5"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 2: NOVA SOLICITAÇÃO DE DIÁRIA (COM BLOCOS SEPARADOS)     -->
+          <!-- ============================================================= -->
+          <section id="view-nova-solicitacao" class="hidden">
+            <div id="form-role-notice" class="mb-5 p-3.5 rounded-2xl border text-xs flex flex-wrap items-center justify-between gap-2"></div>
+
+            <form id="trip-request-form" onsubmit="handleTripFormSubmit(event)" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              <!-- Coluna Principal (8 cols) -->
+              <div class="lg:col-span-8 space-y-6">
+
+                <!-- BLOCO 1: IDENTIFICAÇÃO & BENEFICIÁRIO -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-6 h-6 rounded-lg bg-brand text-white text-xs font-extrabold flex items-center justify-center">1</span>
+                      <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800">Identificação da Viagem & Beneficiário</h2>
+                    </div>
+                    <span id="editing-mode-pill" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">Editando Solicitação</span>
+                  </div>
+
+                  <div class="p-5 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                      <!-- Identificador Único -->
+                      <div class="md:col-span-5">
+                        <label class="flex items-center justify-between text-xs font-bold text-slate-700 uppercase mb-1.5">
+                          <span>Identificador Único *</span>
+                          <span id="id-field-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+                        </label>
+                        <input type="text" id="req-identifier" required oninput="updateRequestSummary()" class="w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono font-bold outline-none transition" />
+                        <p id="id-field-hint" class="text-[11px] text-slate-500 mt-1"></p>
+                      </div>
+
+                      <!-- Beneficiário -->
+                      <div class="md:col-span-7">
+                        <label class="flex items-center justify-between text-xs font-bold text-slate-700 uppercase mb-1.5">
+                          <span>Funcionário Beneficiário *</span>
+                          <span id="ben-field-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+                        </label>
+                        <select id="req-beneficiary" onchange="onReqBeneficiaryChange()" class="w-full px-3.5 py-2.5 rounded-xl border text-sm font-semibold outline-none transition"></select>
+                        <p id="ben-field-hint" class="text-[11px] text-slate-500 mt-1"></p>
+                      </div>
+                    </div>
+
+                    <!-- Card Dados Bancários & Cadastrais -->
+                    <div id="req-beneficiary-bank-card" class="p-4 rounded-2xl bg-slate-50 border border-slate-200/90"></div>
+
+                    <!-- Datas Saída e Retorno -->
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                      <div class="sm:col-span-4">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Data de Saída *</label>
+                        <input type="date" id="req-start-date" required onchange="validateReqDates()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white" />
+                      </div>
+                      <div class="sm:col-span-4">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Data de Retorno *</label>
+                        <input type="date" id="req-end-date" required onchange="validateReqDates()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white" />
+                      </div>
+                      <div class="sm:col-span-4">
+                        <div id="req-date-status" class="px-3.5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BLOCO 2: ROTEIRO DE DESTINOS E CÁLCULO DE DIÁRIAS -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-6 h-6 rounded-lg bg-brand text-white text-xs font-extrabold flex items-center justify-center">2</span>
+                      <div>
+                        <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800">Roteiro de Destinos e Cálculo de Diárias</h2>
+                        <p class="text-[11px] text-slate-500">Selecione um ou mais municípios de Alagoas (Meia Diária 1x / Pernoite 2x)</p>
+                      </div>
+                    </div>
+                    <button type="button" onclick="addReqDestinationRow()" class="px-3.5 py-2 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-bold transition flex items-center gap-1.5">
+                      <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                      <span>+ Adicionar Destino</span>
+                    </button>
+                  </div>
+
+                  <div class="p-5 space-y-3">
+                    <div id="req-destinations-container" class="space-y-3"></div>
+                  </div>
+                </div>
+
+                <!-- BLOCO A (3): DESLOCAMENTO & VEÍCULO (SEPARADO) -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-6 h-6 rounded-lg bg-brand text-white text-xs font-extrabold flex items-center justify-center">3</span>
+                      <div>
+                        <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800">Deslocamento & Veículo</h2>
+                        <p class="text-[11px] text-slate-500">Definição exclusiva do meio de transporte, frota utilizada e rota</p>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-extrabold uppercase">Logística</span>
+                  </div>
+
+                  <div class="p-5 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                      <div class="md:col-span-5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Meio de Transporte *</label>
+                        <select id="req-transport-mode" onchange="onReqTransportModeChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white">
+                          <option value="Veículo Oficial">Veículo Oficial (Frota Própria)</option>
+                          <option value="Veículo Próprio">Veículo Próprio do Servidor</option>
+                          <option value="Transporte Coletivo/Passagem">Transporte Coletivo / Passagem</option>
+                          <option value="Aeronave/Outros">Aeronave / Outros</option>
+                        </select>
+                      </div>
+
+                      <div id="req-official-vehicle-group" class="md:col-span-7">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Veículo Oficial Cadastrado *</label>
+                        <select id="req-vehicle-id" onchange="onReqVehicleChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white"></select>
+                      </div>
+                    </div>
+
+                    <!-- Especificações do Veículo Selecionado -->
+                    <div id="req-vehicle-specs" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs"></div>
+
+                    <!-- Observação / Rota de Deslocamento -->
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Observação / Rota de Deslocamento (Opcional)</label>
+                      <input type="text" id="req-route-note" placeholder="Ex: Saída da sede Maceió às 06h00 via BR-101 / AL-220..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BLOCO B (4): ADICIONAL DE COMBUSTÍVEL (ABASTECIMENTO EXTRA - SEPARADO) -->
+                <div class="bg-white rounded-2xl border-2 border-amber-200 shadow-xs overflow-hidden">
+                  <div class="px-5 py-3.5 bg-amber-50/90 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 text-xs font-extrabold flex items-center justify-center">4</span>
+                      <div>
+                        <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-amber-950">Adicional de Combustível (Abastecimento Extra)</h2>
+                        <p class="text-[11px] text-amber-800">Módulo financeiro independente para cotas extras de abastecimento em viagem</p>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-950 text-[10px] font-extrabold uppercase flex items-center gap-1">
+                      <i data-lucide="fuel" class="w-3.5 h-3.5"></i> Cota Padrão: <span id="fuel-block-unit-badge">R$ 100,00</span>
+                    </span>
+                  </div>
+
+                  <div class="p-5 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                      <div class="sm:col-span-4">
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Valor Unitário Padrão da Cota</label>
+                        <div class="px-3.5 py-2.5 rounded-xl bg-slate-100 border border-slate-200 text-sm font-extrabold text-slate-800 flex items-center justify-between">
+                          <span id="fuel-block-unit-display">R$ 100,00</span>
+                          <span class="text-[10px] font-semibold text-slate-500">REF. SISTEMA</span>
+                        </div>
+                      </div>
+
+                      <div class="sm:col-span-4">
+                        <label for="req-fuel-quotas" class="block text-[11px] font-bold text-amber-900 uppercase mb-1">
+                          Qtd. Cotas / Abastecimentos Extras
+                        </label>
+                        <input
+                          type="number"
+                          id="req-fuel-quotas"
+                          min="0"
+                          max="20"
+                          step="1"
+                          value="0"
+                          oninput="recalculateRequestTotals()"
+                          class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 bg-white text-sm font-extrabold text-center text-slate-900 focus:border-amber-500 outline-none"
+                        />
+                        <p id="fuel-max-quotas-hint" class="text-[10px] text-slate-500 mt-1">Limite máximo: 10 cotas por viagem</p>
+                      </div>
+
+                      <div class="sm:col-span-4">
+                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Subtotal Abastecimento Extra</label>
+                        <div class="px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-300 text-base font-extrabold text-amber-900 text-right" id="fuel-block-subtotal">
+                          R$ 0,00
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label for="req-fuel-note" class="flex items-center justify-between text-xs font-bold text-slate-700 uppercase mb-1.5">
+                        <span>Justificativa / Observação para Combustível Extra</span>
+                        <span id="fuel-note-required-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Opcional</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="req-fuel-note"
+                        placeholder="Ex: Trecho rural sem posto credenciado ou deslocamento superior a 350 km..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BLOCO 5: JUSTIFICATIVA DA VIAGEM E ANEXOS -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2.5">
+                    <span class="w-6 h-6 rounded-lg bg-brand text-white text-xs font-extrabold flex items-center justify-center">5</span>
+                    <div>
+                      <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800">Justificativa Institucional e Anexos</h2>
+                      <p class="text-[11px] text-slate-500">Limite de 500 caracteres + arquivos comprobatórios (PDF / Fotos)</p>
+                    </div>
+                  </div>
+
+                  <div class="p-5 space-y-4">
+                    <div>
+                      <div class="flex items-center justify-between mb-1.5">
+                        <label for="req-justification" class="text-xs font-bold text-slate-700 uppercase">Justificativa da Solicitação *</label>
+                        <span id="req-just-counter" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">0 / 500</span>
+                      </div>
+                      <textarea id="req-justification" rows="3" maxlength="500" required oninput="updateReqJustCounter()" placeholder="Descreva o motivo institucional da viagem..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm resize-none"></textarea>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Documentos Anexos (PDF, JPG, PNG)</label>
+                      <div onclick="document.getElementById('req-file-input').click()" class="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/30 p-5 text-center transition">
+                        <input type="file" id="req-file-input" multiple accept=".pdf,image/jpeg,image/png" onchange="handleReqFileUpload(event)" class="hidden" />
+                        <i data-lucide="upload-cloud" class="w-6 h-6 text-brand mx-auto mb-1.5"></i>
+                        <p class="text-xs font-bold text-slate-800">Clique para anexar ofícios, convocações ou fotos</p>
+                      </div>
+                      <div id="req-attachments-list" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Coluna Lateral Resumo Financeiro (4 cols) -->
+              <aside class="lg:col-span-4 space-y-4 lg:sticky lg:top-16">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300 block">Consolidação</span>
+                      <h3 class="text-sm font-extrabold">Resumo da Solicitação</h3>
+                    </div>
+                    <i data-lucide="receipt" class="w-5 h-5 text-slate-400"></i>
+                  </div>
+
+                  <div class="p-5 space-y-3.5 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Código:</span>
+                        <span id="sum-box-code" class="font-mono font-bold text-slate-900">-</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Beneficiário:</span>
+                        <span id="sum-box-ben" class="font-bold text-slate-800 truncate max-w-[175px]">-</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Período:</span>
+                        <span id="sum-box-dates" class="font-semibold text-slate-700">-</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Transporte:</span>
+                        <span id="sum-box-transport" class="font-semibold text-slate-700 truncate max-w-[175px]">-</span>
+                      </div>
+                    </div>
+
+                    <div class="space-y-2 pt-1">
+                      <div class="flex justify-between">
+                        <span class="text-slate-600">Meias Diárias (1x):</span>
+                        <span id="sum-box-meias" class="font-bold text-slate-900">0 un.</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-600">Pernoites (2x):</span>
+                        <span id="sum-box-pernoites" class="font-bold text-slate-900">0 un.</span>
+                      </div>
+                      <div class="flex justify-between pt-2 border-t border-slate-100">
+                        <span class="font-semibold text-slate-700">Subtotal Diárias:</span>
+                        <span id="sum-box-diarias-val" class="font-bold text-slate-900">R$ 0,00</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="font-semibold text-amber-800">Abastecimento Extra (<span id="sum-box-fuel-qtd">0</span>x):</span>
+                        <span id="sum-box-fuel-val" class="font-bold text-amber-800">R$ 0,00</span>
+                      </div>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-brand-soft border border-brand-soft flex items-center justify-between">
+                      <div>
+                        <span class="text-[10px] font-extrabold uppercase text-brand block">Total Geral</span>
+                        <span class="text-[11px] text-slate-600">Crédito PIX / Conta</span>
+                      </div>
+                      <div id="sum-box-total" class="text-2xl font-extrabold text-brand">R$ 0,00</div>
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                      <button type="submit" onclick="setFormSubmitMode('sign')" class="w-full py-3 px-4 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs sm:text-sm font-bold shadow-md transition flex items-center justify-center gap-2">
+                        <i data-lucide="pen-tool" class="w-4 h-4 text-amber-300"></i>
+                        <span>Assinar e Enviar Pedido</span>
+                      </button>
+                      <button type="submit" onclick="setFormSubmitMode('draft')" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold transition flex items-center justify-center gap-2">
+                        <i data-lucide="save" class="w-4 h-4 text-slate-500"></i>
+                        <span>Salvar como Rascunho</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </form>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 3: LISTA DE SOLICITAÇÕES & APROVAÇÃO DIRETORIA           -->
+          <!-- ============================================================= -->
+          <section id="view-solicitacoes" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <input type="text" id="filter-trips-search" oninput="renderTripsList()" placeholder="Buscar código, servidor ou destino..." class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs w-64" />
+                <select id="filter-trips-status" onchange="renderTripsList()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                  <option value="ALL">Todos os Status</option>
+                  <option value="RASCUNHO">Rascunho</option>
+                  <option value="AGUARDANDO_DIRETORIA">Aguardando Diretoria</option>
+                  <option value="AUTORIZADA">Autorizada</option>
+                  <option value="REJEITADA">Rejeitada</option>
+                  <option value="CANCELADA">Cancelada</option>
+                </select>
+              </div>
+              <button type="button" onclick="openNewTripForm()" class="px-4 py-2 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i> Nova Solicitação
+              </button>
+            </div>
+
+            <div id="trips-cards-container" class="space-y-4"></div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 4: RELATÓRIOS POR PERÍODO & EXPORTAÇÃO CSV               -->
+          <!-- ============================================================= -->
+          <section id="view-relatorios" class="hidden space-y-5">
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-wrap items-end justify-between gap-4">
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-600 mb-1">Data Inicial</label>
+                  <input type="date" id="rep-start" value="2026-11-01" onchange="renderReports()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-600 mb-1">Data Final</label>
+                  <input type="date" id="rep-end" value="2026-11-30" onchange="renderReports()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-600 mb-1">Status</label>
+                  <select id="rep-status" onchange="renderReports()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white">
+                    <option value="ALL">Todos</option>
+                    <option value="AUTORIZADA">Somente Autorizadas</option>
+                    <option value="AGUARDANDO_DIRETORIA">Aguardando Diretoria</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" onclick="exportReportsCSV()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="download" class="w-4 h-4"></i> Exportar Relatório CSV
+              </button>
+            </div>
+
+            <div id="reports-summary-cards" class="grid grid-cols-1 sm:grid-cols-4 gap-4"></div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-500">
+                  <tr>
+                    <th class="p-3.5">Código</th>
+                    <th class="p-3.5">Beneficiário</th>
+                    <th class="p-3.5">Destinos</th>
+                    <th class="p-3.5">Período</th>
+                    <th class="p-3.5 text-right">Diárias</th>
+                    <th class="p-3.5 text-right">Combustível</th>
+                    <th class="p-3.5 text-right">Total</th>
+                    <th class="p-3.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reports-table-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 5: CADASTROS BASE (USUÁRIOS, MUNICÍPIOS, SETORES, FROTA) -->
+          <!-- ============================================================= -->
+          <section id="view-cadastros" class="hidden space-y-5">
+            <div class="flex flex-wrap gap-2 bg-white p-2 rounded-2xl border border-slate-200">
+              <button type="button" onclick="switchMasterDataTab('users')" data-md-tab="users" class="px-4 py-2 rounded-xl text-xs font-bold transition">Usuários & Dados Bancários</button>
+              <button type="button" onclick="switchMasterDataTab('municipalities')" data-md-tab="municipalities" class="px-4 py-2 rounded-xl text-xs font-bold transition">Municípios (Tabela AL)</button>
+              <button type="button" onclick="switchMasterDataTab('sectors')" data-md-tab="sectors" class="px-4 py-2 rounded-xl text-xs font-bold transition">Setores</button>
+              <button type="button" onclick="switchMasterDataTab('vehicles')" data-md-tab="vehicles" class="px-4 py-2 rounded-xl text-xs font-bold transition">Veículos da Frota</button>
+            </div>
+            <div id="master-data-content" class="bg-white rounded-2xl border border-slate-200 p-5"></div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 6: CONFIGURAÇÕES DO SISTEMA (COMBUSTÍVEL, RBAC, BRAND)   -->
+          <!-- ============================================================= -->
+          <section id="view-configuracoes" class="hidden space-y-5">
+            <!-- Sub-abas Dinâmicas conforme permissões do perfil -->
+            <div id="settings-tabs-bar" class="flex flex-wrap gap-2 bg-white p-2 rounded-2xl border border-slate-200"></div>
+
+            <!-- Sub-view A: Parâmetros Financeiros & Abastecimento Extra -->
+            <div id="settings-panel-fuel" class="hidden space-y-6">
+              <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
+                  <div>
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 block">Parâmetro Global do Sistema</span>
+                    <h2 class="text-base font-extrabold text-slate-900">Parâmetros Financeiros & Abastecimento Extra</h2>
+                    <p class="text-xs text-slate-500">Define o valor padrão da cota extra de combustível (Ref. planilha: R$ 100,00) e regras de controle.</p>
+                  </div>
+                  <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                    Permissão Ativa: config_combustivel
+                  </span>
+                </div>
+
+                <form onsubmit="saveFuelConfig(event)" class="grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
+                  <div class="md:col-span-4">
+                    <label for="cfg-fuel-unit-value" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Valor Padrão da Cota Extra (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      id="cfg-fuel-unit-value"
+                      step="0.01"
+                      min="0"
+                      required
+                      class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 bg-amber-50/30 text-base font-extrabold text-slate-900 outline-none focus:border-amber-500"
+                    />
+                    <p class="text-[11px] text-slate-500 mt-1">Aplicado imediatamente nas novas solicitações.</p>
+                  </div>
+
+                  <div class="md:col-span-4">
+                    <label for="cfg-fuel-max-quotas" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Limite Máximo de Cotas / Viagem *
+                    </label>
+                    <input
+                      type="number"
+                      id="cfg-fuel-max-quotas"
+                      min="1"
+                      max="100"
+                      required
+                      class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-900"
+                    />
+                    <p class="text-[11px] text-slate-500 mt-1">Teto permitido por solicitação de diária.</p>
+                  </div>
+
+                  <div class="md:col-span-4">
+                    <label class="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                      <input type="checkbox" id="cfg-fuel-require-note" class="w-4 h-4 rounded text-amber-600" />
+                      <span class="text-xs font-bold text-slate-800">Exigir justificativa quando houver cota &gt; 0</span>
+                    </label>
+                  </div>
+
+                  <div class="md:col-span-12 flex justify-end pt-2">
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-bold shadow transition flex items-center gap-2">
+                      <i data-lucide="save" class="w-4 h-4"></i>
+                      <span>Salvar Parâmetros de Combustível</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Histórico de Alterações do Valor de Combustível -->
+              <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+                <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                  <i data-lucide="history" class="w-4 h-4 text-brand"></i> Histórico de Auditoria — Alterações de Combustível Extra
+                </h3>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-500">
+                      <tr>
+                        <th class="p-3">Data / Hora</th>
+                        <th class="p-3">Responsável</th>
+                        <th class="p-3">Perfil</th>
+                        <th class="p-3">Valor Anterior</th>
+                        <th class="p-3">Novo Valor</th>
+                        <th class="p-3">Limite Cotas</th>
+                      </tr>
+                    </thead>
+                    <tbody id="fuel-history-tbody" class="divide-y divide-slate-100"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sub-view B: Matriz Granular de Perfis e Permissões (RBAC) -->
+            <div id="settings-panel-rbac" class="hidden bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+              <div class="pb-4 border-b border-slate-200">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand block">Controle de Acesso</span>
+                <h2 class="text-base font-extrabold text-slate-900">Matriz Granular de Perfis e Permissões (RBAC)</h2>
+                <p class="text-xs text-slate-500">Marque ou desmarque as funcionalidades permitidas para cada perfil. As alterações refletem em tempo real na interface.</p>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-600">
+                    <tr>
+                      <th class="p-3.5">Funcionalidade / Permissão</th>
+                      <th class="p-3.5 text-center">Administrador</th>
+                      <th class="p-3.5 text-center">Gestor</th>
+                      <th class="p-3.5 text-center">Diretoria</th>
+                      <th class="p-3.5 text-center">Usuário Comum</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rbac-matrix-tbody" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Sub-view C: Identidade Visual & White-Label -->
+            <div id="settings-panel-brand" class="hidden bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+              <div class="pb-4 border-b border-slate-200">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand block">Personalização Institucional</span>
+                <h2 class="text-base font-extrabold text-slate-900">Identidade Visual & Dados da Empresa (White-Label)</h2>
+                <p class="text-xs text-slate-500">Personalize nome do sistema, razão social, CNPJ, logomarca e paleta de cores do portal e do espelho oficial.</p>
+              </div>
+
+              <form onsubmit="saveBrandSettings(event)" class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div class="md:col-span-4">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Sistema *</label>
+                  <input type="text" id="wl-system-name" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold" />
+                </div>
+                <div class="md:col-span-5">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Razão Social da Empresa *</label>
+                  <input type="text" id="wl-company-name" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div class="md:col-span-3">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">CNPJ *</label>
+                  <input type="text" id="wl-cnpj" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div class="md:col-span-8">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Endereço Completo</label>
+                  <input type="text" id="wl-address" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div class="md:col-span-4">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone / E-mail Institucional</label>
+                  <input type="text" id="wl-contact" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+                </div>
+
+                <div class="md:col-span-6">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Logomarca (PNG/JPG)</label>
+                  <input type="file" accept="image/*" onchange="handleBrandLogoUpload(event)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+                </div>
+
+                <div class="md:col-span-6">
+                  <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Cor Primária do Sistema</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" id="wl-primary-color" class="w-12 h-10 rounded-xl border border-slate-300 cursor-pointer" />
+                    <button type="button" onclick="applyPresetColor('#1d4ed8')" class="px-2.5 py-1.5 rounded-lg bg-blue-700 text-white text-[11px] font-bold">Azul Gov</button>
+                    <button type="button" onclick="applyPresetColor('#047857')" class="px-2.5 py-1.5 rounded-lg bg-emerald-700 text-white text-[11px] font-bold">Esmeralda</button>
+                    <button type="button" onclick="applyPresetColor('#4338ca')" class="px-2.5 py-1.5 rounded-lg bg-indigo-700 text-white text-[11px] font-bold">Índigo</button>
+                    <button type="button" onclick="applyPresetColor('#0f172a')" class="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold">Grafite</button>
+                  </div>
+                </div>
+
+                <div class="md:col-span-12 flex justify-end pt-2">
+                  <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-bold shadow">
+                    Aplicar Identidade Visual
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Sub-view D: Gestão da Base de Testes (Backup & Reset) -->
+            <div id="settings-panel-backup" class="hidden bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+              <div class="pb-4 border-b border-slate-200">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 block">Homologação Etapa 1</span>
+                <h2 class="text-base font-extrabold text-slate-900">Gestão da Base de Testes (Backup JSON & Restauração)</h2>
+                <p class="text-xs text-slate-500">Exporte a base homologada para compartilhar com outros testadores, importe um arquivo JSON ou restaure os dados originais da planilha.</p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-4">
+                  <div>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2.5">
+                      <i data-lucide="download" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-xs font-extrabold text-slate-900 uppercase">1. Exportar Base (.json)</h3>
+                    <p class="text-[11px] text-slate-600 mt-1">Gera um arquivo JSON completo com todos os usuários, senhas SHA-256, diárias, permissões e identidade visual.</p>
+                  </div>
+                  <button type="button" onclick="exportTestDatabaseJSON()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">
+                    Baixar Backup JSON
+                  </button>
+                </div>
+
+                <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-4">
+                  <div>
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-2.5">
+                      <i data-lucide="upload" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-xs font-extrabold text-slate-900 uppercase">2. Importar Base (.json)</h3>
+                    <p class="text-[11px] text-slate-600 mt-1">Carrega uma base de homologação compartilhada pelo administrador e substitui o armazenamento local.</p>
+                  </div>
+                  <label class="w-full py-2.5 px-3 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-bold text-center cursor-pointer transition">
+                    <span>Selecionar Arquivo JSON</span>
+                    <input type="file" accept=".json,application/json" onchange="importTestDatabaseJSON(event)" class="hidden" />
+                  </label>
+                </div>
+
+                <div class="p-4 rounded-2xl border border-rose-200 bg-rose-50/60 flex flex-col justify-between gap-4">
+                  <div>
+                    <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mb-2.5">
+                      <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-xs font-extrabold text-rose-900 uppercase">3. Restaurar Padrão de Fábrica</h3>
+                    <p class="text-[11px] text-rose-800/80 mt-1">Limpa o localStorage e recarrega os dados iniciais da planilha <code>27-COITE DO NOIA_05112026.xlsx</code>.</p>
+                  </div>
+                  <button type="button" onclick="openResetFactoryModal()" class="w-full py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition">
+                    Restaurar Dados Originais
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 1: ASSINATURA DIGITAL / AUTORIZAÇÃO DIRETORIA                   -->
+  <!-- ===================================================================== -->
+  <div id="auth-action-modal" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs p-4 flex items-center justify-center">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="aam-title" class="font-bold text-sm flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-4 h-4 text-amber-300"></i>
+          <span>Assinatura Eletrônica</span>
+        </h3>
+        <button type="button" onclick="closeAuthActionModal()" class="text-slate-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="confirmAuthAction(event)" class="p-6 space-y-4">
+        <div id="aam-summary" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1"></div>
+
+        <div id="aam-reason-wrapper" class="hidden">
+          <label for="aam-reason" class="block text-xs font-bold text-slate-700 uppercase mb-1">Motivo / Justificativa *</label>
+          <textarea id="aam-reason" rows="2" placeholder="Informe o motivo..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"></textarea>
+        </div>
+
+        <div>
+          <label for="aam-password" class="block text-xs font-bold text-slate-700 uppercase mb-1">Senha Pessoal de Confirmação *</label>
+          <input type="password" id="aam-password" required placeholder="Digite sua senha (padrão: 123456)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAuthActionModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700">Cancelar</button>
+          <button type="submit" id="aam-submit-btn" class="px-5 py-2.5 rounded-xl bg-brand text-white text-xs font-bold shadow">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 2: ESPELHO OFICIAL DE IMPRESSÃO / PDF                           -->
+  <!-- ===================================================================== -->
+  <div id="voucher-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/75 backdrop-blur-xs p-3 sm:p-5">
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden my-4">
+      <div class="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between no-print">
+        <span class="text-xs sm:text-sm font-bold flex items-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4 text-amber-300"></i>
+          <span>Espelho Oficial da Solicitação de Diária</span>
+        </span>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-brand text-white text-xs font-bold flex items-center gap-1.5">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir / Salvar PDF
+          </button>
+          <button type="button" onclick="closeVoucherModal()" class="p-1.5 text-slate-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+      <div id="voucher-print-area" class="p-6 sm:p-8 text-slate-900 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 3: CREDENCIAIS INICIAIS DE HOMOLOGAÇÃO                          -->
+  <!-- ===================================================================== -->
+  <div id="credentials-modal" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs p-4 flex items-center justify-center">
+    <div class="max-w-lg w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 class="font-bold text-sm flex items-center gap-2">
+          <i data-lucide="key-round" class="w-4 h-4 text-amber-300"></i>
+          <span>Credenciais Iniciais de Homologação</span>
+        </h3>
+        <button type="button" onclick="closeCredentialsModal()" class="text-slate-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-6 space-y-4 text-xs">
+        <p class="text-slate-600">
+          Para validar os diferentes perfis de acesso no piloto, utilize uma das contas abaixo (senha inicial padrão: <code class="px-1.5 py-0.5 rounded bg-slate-100 font-bold text-slate-900">123456</code>).
+        </p>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-500">
+              <tr>
+                <th class="p-2.5">Perfil</th>
+                <th class="p-2.5">Login</th>
+                <th class="p-2.5">Senha Inicial</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-mono">
+              <tr><td class="p-2.5 font-sans font-bold text-slate-800">Administrador</td><td class="p-2.5">admin</td><td class="p-2.5">123456</td></tr>
+              <tr><td class="p-2.5 font-sans font-bold text-slate-800">Gestor</td><td class="p-2.5">carlos.mendes</td><td class="p-2.5">123456</td></tr>
+              <tr><td class="p-2.5 font-sans font-bold text-slate-800">Diretoria</td><td class="p-2.5">helena.diretoria</td><td class="p-2.5">123456</td></tr>
+              <tr><td class="p-2.5 font-sans font-bold text-slate-800">Usuário Comum</td><td class="p-2.5">bernardo.santos</td><td class="p-2.5">123456</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex justify-end">
+          <button type="button" onclick="closeCredentialsModal()" class="px-4 py-2 rounded-xl bg-brand text-white font-bold">Entendi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 4: CONFIRMAÇÃO DE RESTAURAÇÃO DA BASE DE TESTES                 -->
+  <!-- ===================================================================== -->
+  <div id="reset-factory-modal" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs p-4 flex items-center justify-center">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 bg-rose-700 text-white flex items-center justify-between">
+        <h3 class="font-bold text-sm flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          <span>Restaurar Padrão de Fábrica</span>
+        </h3>
+        <button type="button" onclick="closeResetFactoryModal()" class="text-white/80 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-6 space-y-4 text-xs">
+        <p class="text-slate-700">
+          Tem certeza que deseja apagar todas as alterações salvas no navegador e restaurar a base original de homologação? Você será redirecionado para a tela de login.
+        </p>
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="closeResetFactoryModal()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Cancelar</button>
+          <button type="button" onclick="confirmResetFactory()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">Sim, Restaurar Base</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 3. JAVASCRIPT: ESTADO, PERSISTÊNCIA LOCALSTORAGE, SHA-256 E RBAC      -->
+  <!-- ===================================================================== -->
+  <script>
+    const STORAGE_KEY = 'sisdiarias_homolog_v1';
+    const DEFAULT_PASS_SHA256 = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // SHA-256("123456")
+
+    async function sha256Hex(plainText) {
+      if (window.crypto && window.crypto.subtle) {
+        const enc = new TextEncoder().encode(plainText);
+        const buf = await window.crypto.subtle.digest('SHA-256', enc);
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+      return plainText;
+    }
+
+    function cloneInitialSeedData() {
+      return {
+        systemConfig: {
+          fuelQuotaDefaultValue: 100.00,
+          fuelMaxQuotasPerTrip: 10,
+          fuelRequireJustification: false,
+          fuelHistory: [
+            {
+              date: '05/11/2026 08:00',
+              user: 'Sistema (Carga Inicial Planilha)',
+              role: 'Administrador',
+              oldValue: 100.00,
+              newValue: 100.00,
+              maxQuotas: 10
+            }
+          ],
+          brand: {
+            systemName: 'SisDiárias',
+            companyName: 'Companhia de Infraestrutura e Serviços de Alagoas S/A',
+            cnpj: '12.345.678/0001-99',
+            address: 'Av. Fernandes Lima, 1200 — Farol, Maceió/AL',
+            contact: '(82) 3315-0000 • diarias@empresa.al.gov.br',
+            primaryColor: '#1d4ed8',
+            logoDataUrl: ''
+          }
+        },
+        rolePermissions: {
+          administrador: {
+            view_dashboard: true,
+            create_trip: true,
+            create_for_others: true,
+            edit_identifier: true,
+            approve_director: true,
+            cancel_trip: true,
+            view_reports: true,
+            manage_master_data: true,
+            config_combustivel: true,
+            manage_rbac: true,
+            manage_whitelabel: true
+          },
+          gestor: {
+            view_dashboard: true,
+            create_trip: true,
+            create_for_others: true,
+            edit_identifier: false,
+            approve_director: false,
+            cancel_trip: true,
+            view_reports: true,
+            manage_master_data: false,
+            config_combustivel: true,
+            manage_rbac: false,
+            manage_whitelabel: false
+          },
+          diretoria: {
+            view_dashboard: true,
+            create_trip: true,
+            create_for_others: false,
+            edit_identifier: false,
+            approve_director: true,
+            cancel_trip: true,
+            view_reports: true,
+            manage_master_data: false,
+            config_combustivel: false,
+            manage_rbac: false,
+            manage_whitelabel: false
+          },
+          usuario: {
+            view_dashboard: false,
+            create_trip: true,
+            create_for_others: false,
+            edit_identifier: false,
+            approve_director: false,
+            cancel_trip: false,
+            view_reports: false,
+            manage_master_data: false,
+            config_combustivel: false,
+            manage_rbac: false,
+            manage_whitelabel: false
+          }
+        },
+        sectors: [
+          { id: 'sec-1', descricao: 'ILUMINAÇÃO PÚBLICA', ativo: true },
+          { id: 'sec-2', descricao: 'OPERAÇÕES E MANUTENÇÃO', ativo: true },
+          { id: 'sec-3', descricao: 'ENGENHARIA E PROJETOS', ativo: true },
+          { id: 'sec-4', descricao: 'DIRETORIA EXECUTIVA', ativo: true },
+          { id: 'sec-5', descricao: 'TECNOLOGIA E GOVERNANÇA', ativo: true }
+        ],
+        vehicles: [
+          { id: 'veh-1', marca: 'Fiat', modelo: 'Strada Endurance 1.4', placa: 'QWI-4B21', chassi: '9BD5781FFNY412098', combustivel: 'Flex', ativo: true },
+          { id: 'veh-2', marca: 'Toyota', modelo: 'Hilux CD 4x4 Diesel', placa: 'QLA-8E90', chassi: '8AJKA3CD501887432', combustivel: 'Diesel', ativo: true },
+          { id: 'veh-3', marca: 'Volkswagen', modelo: 'Saveiro Robust 1.6', placa: 'RGN-2J15', chassi: '9BWKB45U6NP098321', combustivel: 'Flex', ativo: true },
+          { id: 'veh-4', marca: 'Chevrolet', modelo: 'Onix Plus LT 1.0', placa: 'QLE-9A10', chassi: '9BGKS69V0NG112233', combustivel: 'Gasolina', ativo: true }
+        ],
+        users: [
+          {
+            id: 'u-admin',
+            nome: 'ADMIN MASTER (GOVERNANÇA)',
+            login: 'admin',
+            senhaHash: DEFAULT_PASS_SHA256,
+            cpf: '111.222.333-44',
+            setor: 'TECNOLOGIA E GOVERNANÇA',
+            ativo: true,
+            nivelAcesso: 'administrador',
+            banco: 'Banco do Brasil',
+            agencia: '3557-2',
+            conta: '10452-9',
+            tipoConta: 'Conta Corrente',
+            chavePix: '111.222.333-44',
+            tipoChavePix: 'CPF/CNPJ'
+          },
+          {
+            id: 'u-gestor',
+            nome: 'CARLOS EDUARDO MENDES',
+            login: 'carlos.mendes',
+            senhaHash: DEFAULT_PASS_SHA256,
+            cpf: '444.555.666-77',
+            setor: 'OPERAÇÕES E MANUTENÇÃO',
+            ativo: true,
+            nivelAcesso: 'gestor',
+            banco: 'Caixa Econômica Federal',
+            agencia: '0055',
+            conta: '00045122-3',
+            tipoConta: 'Conta Corrente',
+            chavePix: 'carlos.mendes@empresa.al.gov.br',
+            tipoChavePix: 'E-mail'
+          },
+          {
+            id: 'u-diretoria',
+            nome: 'DRA. HELENA VASCONCELOS',
+            login: 'helena.diretoria',
+            senhaHash: DEFAULT_PASS_SHA256,
+            cpf: '999.888.777-66',
+            setor: 'DIRETORIA EXECUTIVA',
+            ativo: true,
+            nivelAcesso: 'diretoria',
+            banco: 'Banco do Brasil',
+            agencia: '3557-2',
+            conta: '99881-0',
+            tipoConta: 'Conta Corrente',
+            chavePix: '999.888.777-66',
+            tipoChavePix: 'CPF/CNPJ'
+          },
+          {
+            id: 'u-bernardo',
+            nome: 'BERNARDO SOUZA DE ALMEIDA SANTOS',
+            login: 'bernardo.santos',
+            senhaHash: DEFAULT_PASS_SHA256,
+            cpf: '032.751.874-06',
+            setor: 'ILUMINAÇÃO PÚBLICA',
+            ativo: true,
+            nivelAcesso: 'usuario',
+            banco: 'Banco do Brasil',
+            agencia: '1601-2',
+            conta: '33084-1',
+            tipoConta: 'Conta Corrente',
+            chavePix: '032.751.874-06',
+            tipoChavePix: 'CPF/CNPJ'
+          },
+          {
+            id: 'u-joao',
+            nome: 'JOÃO PEDRO VASCONCELOS',
+            login: 'joao.pedro',
+            senhaHash: DEFAULT_PASS_SHA256,
+            cpf: '222.333.444-55',
+            setor: 'ENGENHARIA E PROJETOS',
+            ativo: true,
+            nivelAcesso: 'usuario',
+            banco: 'Bradesco',
+            agencia: '2140',
+            conta: '55412-7',
+            tipoConta: 'Poupança',
+            chavePix: '(82) 99912-3456',
+            tipoChavePix: 'Telefone'
+          }
+        ],
+        trips: [
+          {
+            id: 'trip-1',
+            codigo: '27-COITE DO NOIA_05112026',
+            beneficiaryId: 'u-bernardo',
+            startDate: '2026-11-05',
+            endDate: '2026-11-05',
+            transportMode: 'Veículo Oficial',
+            vehicleId: 'veh-1',
+            routeNote: 'Maceió -> Coité do Nóia -> Maceió (via BR-101 / AL-220)',
+            fuelQuotas: 0,
+            fuelUnitValueApplied: 100.00,
+            fuelNote: '',
+            destinations: [
+              { munId: 'm-20', qtdMeia: 1, qtdPernoite: 0 }
+            ],
+            justification: 'RECONTAGEM DE PONTOS DE IP JUNTO A PREFEITURA DE COITÉ DO NÓIA PARA DEFESA ADMINISTRATIVA.',
+            attachments: [{ name: 'Oficio_Coite_Do_Noia_05112026.pdf', type: 'application/pdf', size: '240 KB' }],
+            status: 'AUTORIZADA',
+            requesterSignature: {
+              signerName: 'BERNARDO SOUZA DE ALMEIDA SANTOS',
+              signerCpf: '032.751.874-06',
+              timestamp: '04/11/2026 14:22:10',
+              hash: 'SHA256-9F8A7B6C5D4E3F2A1B0C9D8E7F6A5B4C'
+            },
+            directorApproval: {
+              approverName: 'DRA. HELENA VASCONCELOS',
+              approverCpf: '999.888.777-66',
+              timestamp: '04/11/2026 16:05:44',
+              hash: 'SHA256-1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D'
+            },
+            cancellation: null
+          },
+          {
+            id: 'trip-2',
+            codigo: '28-DELMIRO GOUVEIA_19112026',
+            beneficiaryId: 'u-joao',
+            startDate: '2026-11-19',
+            endDate: '2026-11-21',
+            transportMode: 'Veículo Oficial',
+            vehicleId: 'veh-2',
+            routeNote: 'Maceió -> Arapiraca -> Delmiro Gouveia (Sertão)',
+            fuelQuotas: 2,
+            fuelUnitValueApplied: 100.00,
+            fuelNote: 'Deslocamento superior a 620 km ida/volta no Alto Sertão.',
+            destinations: [
+              { munId: 'm-25', qtdMeia: 1, qtdPernoite: 2 }
+            ],
+            justification: 'FISCALIZAÇÃO DE SUBESTAÇÃO E LEVANTAMENTO TOPOGRÁFICO DE REDE DE ALTA TENSÃO NO ALTO SERTÃO.',
+            attachments: [{ name: 'OS_412_Sertao.pdf', type: 'application/pdf', size: '418 KB' }],
+            status: 'AGUARDANDO_DIRETORIA',
+            requesterSignature: {
+              signerName: 'CARLOS EDUARDO MENDES',
+              signerCpf: '444.555.666-77',
+              timestamp: '18/11/2026 09:40:15',
+              hash: 'SHA256-77E8F9A0B1C2D3E4F5A6B7C8D9E0F1A2'
+            },
+            directorApproval: null,
+            cancellation: null
+          }
+        ]
+      };
+    }
+
+    // =========================================================================
+    // DADOS INICIAIS E CONFIGURAÇÕES DO SISTEMA
+    // =========================================================================
+    const INITIAL_SEED = cloneInitialSeedData();
+    let systemConfig = INITIAL_SEED.systemConfig;
+
+    // Matriz Granular de Perfis e Permissões (RBAC)
+    const PERMISSION_DEFINITIONS = [
+      { key: 'view_dashboard', label: 'Visualizar Dashboard Analítico' },
+      { key: 'create_trip', label: 'Solicitar Diárias (Próprias)' },
+      { key: 'create_for_others', label: 'Emitir Diárias para Outros Colaboradores Ativos' },
+      { key: 'edit_identifier', label: 'Editar Manualmente o Identificador Único da Viagem' },
+      { key: 'approve_director', label: 'Autorizar / Rejeitar Solicitações (Nível Diretoria)' },
+      { key: 'cancel_trip', label: 'Cancelar Solicitações com Justificativa' },
+      { key: 'view_reports', label: 'Acessar Relatórios Financeiros e Exportar CSV' },
+      { key: 'manage_master_data', label: 'Gerenciar Cadastros Base (Usuários, Municípios, Setores, Frota)' },
+      { key: 'config_combustivel', label: 'Configurar Valor Padrão de Abastecimento Extra' },
+      { key: 'manage_rbac', label: 'Gerenciar Matriz de Perfis e Permissões (RBAC)' },
+      { key: 'manage_whitelabel', label: 'Personalizar Identidade Visual e Empresa (White-Label)' }
+    ];
+
+    let rolePermissions = INITIAL_SEED.rolePermissions;
+
+    // Entidades Base
+    let sectors = INITIAL_SEED.sectors;
+    let vehicles = INITIAL_SEED.vehicles;
+    let users = INITIAL_SEED.users;
+
+    const RAW_MUN = [
+      ["ÁGUA BRANCA", 3, 150, 300, true], ["ANADIA", 2, 120, 240, true], ["ARAPIRACA", 2, 120, 240, true],
+      ["ATALAIA", 1, 100, 200, false], ["BARRA DE SANTO ANTÔNIO", 1, 100, 200, false], ["BARRA DE SÃO MIGUEL", 1, 100, 200, false],
+      ["BATALHA", 3, 150, 300, true], ["BELÉM", 2, 120, 240, true], ["BELO MONTE", 3, 150, 300, true],
+      ["BOCA DA MATA", 2, 120, 240, true], ["CACIMBINHAS", 3, 150, 300, true], ["CAJUEIRO", 1, 100, 200, true],
+      ["CAMPESTRE", 2, 120, 240, true], ["CAMPO ALEGRE", 2, 120, 240, true], ["CAMPO GRANDE", 3, 150, 300, true],
+      ["CANAPI", 3, 150, 300, true], ["CAPELA", 1, 100, 200, true], ["CARNEIROS", 3, 150, 300, true],
+      ["CHÃ PRETA", 2, 120, 240, true], ["COITÉ DO NÓIA", 2, 120, 240, true], ["COLÔNIA LEOPOLDINA", 2, 120, 240, true],
+      ["COQUEIRO SECO", 1, 100, 200, false], ["CORURIPE", 2, 120, 240, true], ["CRAÍBAS", 2, 120, 240, true],
+      ["DELMIRO GOUVEIA", 3, 150, 300, true], ["DOIS RIACHOS", 3, 150, 300, true], ["ESTRELA DE ALAGOAS", 2, 120, 240, true],
+      ["FEIRA GRANDE", 2, 120, 240, true], ["FELIZ DESERTO", 2, 120, 240, true], ["FLEXEIRAS", 1, 100, 200, true],
+      ["GIRAU DO PONCIANO", 2, 120, 240, true], ["IBATEGUARA", 2, 120, 240, true], ["IGACI", 2, 120, 240, true],
+      ["IGREJA NOVA", 2, 120, 240, true], ["INHAPI", 3, 150, 300, true], ["JACARÉ DOS HOMENS", 3, 150, 300, true],
+      ["JACUÍPE", 2, 120, 240, true], ["JAPARATINGA", 2, 120, 240, true], ["JARAMATAIA", 3, 150, 300, true],
+      ["JEQUIÁ DA PRAIA", 2, 120, 240, true], ["JOAQUIM GOMES", 2, 120, 240, true], ["JUNDIÁ", 2, 120, 240, true],
+      ["JUNQUEIRO", 2, 120, 240, true], ["LAGOA DA CANOA", 2, 120, 240, true], ["LIMOEIRO DE ANADIA", 2, 120, 240, true],
+      ["MAJOR IZIDORO", 3, 150, 300, true], ["MAR VERMELHO", 2, 120, 240, true], ["MARAGOGI", 2, 120, 240, true],
+      ["MARAVILHA", 3, 150, 300, true], ["MARECHAL DEODORO", 1, 100, 200, false], ["MARIBONDO", 2, 120, 240, true],
+      ["MATA GRANDE", 3, 150, 300, true], ["MATRIZ DE CAMARAGIBE", 2, 120, 240, true], ["MESSIAS", 1, 100, 200, false],
+      ["MINADOR DO NEGRÃO", 2, 120, 240, true], ["MONTEIRÓPOLIS", 3, 150, 300, true], ["MURICI", 1, 100, 200, true],
+      ["NOVO LINO", 2, 120, 240, true], ["OLHO D'ÁGUA DAS FLORES", 3, 150, 300, true], ["OLHO D'ÁGUA DO CASADO", 3, 150, 300, true],
+      ["OLHO D'ÁGUA GRANDE", 3, 150, 300, true], ["OLIVENÇA", 3, 150, 300, true], ["OURO BRANCO", 3, 150, 300, true],
+      ["PALESTINA", 3, 150, 300, true], ["PALMEIRA DOS ÍNDIOS", 2, 120, 240, true], ["PÃO DE AÇÚCAR", 3, 150, 300, true],
+      ["PARICONHA", 3, 150, 300, true], ["PARIPUEIRA", 1, 100, 200, false], ["PASSO DE CAMARAGIBE", 2, 120, 240, true],
+      ["PAULO JACINTO", 2, 120, 240, true], ["PENEDO", 2, 120, 240, true], ["PIAÇABUÇU", 2, 120, 240, true],
+      ["PILAR", 1, 100, 200, false], ["PINDOBA", 2, 120, 240, true], ["PIRANHAS", 3, 150, 300, true],
+      ["POÇO DAS TRINCHEIRAS", 3, 150, 300, true], ["PORTO CALVO", 2, 120, 240, true], ["PORTO DE PEDRAS", 2, 120, 240, true],
+      ["PORTO REAL DO COLÉGIO", 3, 150, 300, true], ["QUEBRANGULO", 2, 120, 240, true], ["RIO LARGO", 1, 100, 200, false],
+      ["ROTEIRO", 1, 100, 200, true], ["SANTA LUZIA DO NORTE", 1, 100, 200, false], ["SANTANA DO IPANEMA", 3, 150, 300, true],
+      ["SANTANA DO MUNDAÚ", 2, 120, 240, true], ["SÃO BRÁS", 3, 150, 300, true], ["SÃO JOSÉ DA LAJE", 2, 120, 240, true],
+      ["SÃO JOSÉ DA TAPERA", 3, 150, 300, true], ["SÃO LUÍS DO QUITUNDE", 1, 100, 200, true], ["SÃO MIGUEL DOS CAMPOS", 1, 100, 200, true],
+      ["SÃO MIGUEL DOS MILAGRES", 2, 120, 240, true], ["SÃO SEBASTIÃO", 2, 120, 240, true], ["SATUBA", 1, 100, 200, false],
+      ["SENADOR RUI PALMEIRA", 3, 150, 300, true], ["TANQUE D'ARCA", 2, 120, 240, true], ["TAQUARANA", 2, 120, 240, true],
+      ["TEOTÔNIO VILELA", 2, 120, 240, true], ["TRAIPU", 3, 150, 300, true], ["UNIÃO DOS PALMARES", 2, 120, 240, true],
+      ["VIÇOSA", 2, 120, 240, true]
+    ];
+
+    let municipalities = RAW_MUN.map((m, idx) => ({
+      id: `m-${idx + 1}`,
+      nome: m[0],
+      area: m[1],
+      meiaDiaria: m[2],
+      pernoite: m[3],
+      permitePernoite: m[4],
+      ativo: true
+    }));
+
+    let trips = INITIAL_SEED.trips;
+
+    // Persistência Automática em localStorage
+    function saveStateToStorage() {
+      try {
+        const snapshot = {
+          version: 1,
+          updatedAt: new Date().toISOString(),
+          systemConfig,
+          rolePermissions,
+          sectors,
+          vehicles,
+          users,
+          municipalities,
+          trips
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      } catch (err) {
+        console.warn('Falha ao persistir no localStorage:', err);
+      }
+    }
+
+    function loadStateFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (parsed.systemConfig) systemConfig = parsed.systemConfig;
+        if (parsed.rolePermissions) rolePermissions = parsed.rolePermissions;
+        if (Array.isArray(parsed.sectors)) sectors = parsed.sectors;
+        if (Array.isArray(parsed.vehicles)) vehicles = parsed.vehicles;
+        if (Array.isArray(parsed.users)) users = parsed.users;
+        if (Array.isArray(parsed.municipalities)) municipalities = parsed.municipalities;
+        if (Array.isArray(parsed.trips)) trips = parsed.trips;
+        return true;
+      } catch (err) {
+        console.warn('Falha ao ler localStorage:', err);
+        return false;
+      }
+    }
+
+    function exportTestDatabaseJSON() {
+      saveStateToStorage();
+      const raw = localStorage.getItem(STORAGE_KEY) || '{}';
+      const blob = new Blob([raw], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sisdiarias_homolog_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      showToast('Backup JSON da base de testes exportado!', 'success');
+    }
+
+    function importTestDatabaseJSON(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!parsed.users || !parsed.trips || !parsed.systemConfig) {
+            throw new Error('Estrutura JSON inválida.');
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          loadStateFromStorage();
+          applyBrandThemeToDOM();
+          showToast('Base de testes importada com sucesso! Faça login novamente.', 'success');
+          logout();
+        } catch (err) {
+          showToast('Arquivo JSON inválido ou incompatível.', 'error');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function openResetFactoryModal() {
+      document.getElementById('reset-factory-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeResetFactoryModal() {
+      document.getElementById('reset-factory-modal').classList.add('hidden');
+    }
+
+    function confirmResetFactory() {
+      localStorage.removeItem(STORAGE_KEY);
+      const fresh = cloneInitialSeedData();
+      systemConfig = fresh.systemConfig;
+      rolePermissions = fresh.rolePermissions;
+      sectors = fresh.sectors;
+      vehicles = fresh.vehicles;
+      users = fresh.users;
+      trips = fresh.trips;
+      municipalities = RAW_MUN.map((m, idx) => ({
+        id: `m-${idx + 1}`,
+        nome: m[0],
+        area: m[1],
+        meiaDiaria: m[2],
+        pernoite: m[3],
+        permitePernoite: m[4],
+        ativo: true
+      }));
+      saveStateToStorage();
+      applyBrandThemeToDOM();
+      closeResetFactoryModal();
+      showToast('Base restaurada para o padrão original da planilha!', 'success');
+      logout();
+    }
+
+    function openCredentialsModal() {
+      document.getElementById('credentials-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCredentialsModal() {
+      document.getElementById('credentials-modal').classList.add('hidden');
+    }
+
+    // Estado da Sessão
+    let currentUser = null;
+    let currentView = 'nova-solicitacao';
+    let currentSettingsTab = 'fuel';
+    let currentMasterDataTab = 'users';
+    let editingTripId = null;
+    let formSubmitMode = 'sign';
+    let formAttachments = [];
+    let pendingAuthModalContext = null;
+
+    // =========================================================================
+    // UTILITÁRIOS GERAIS
+    // =========================================================================
+    function formatBRL(v) {
+      return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatDateBR(iso) {
+      if (!iso) return '-';
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function hasPermission(permKey) {
+      if (!currentUser) return false;
+      return Boolean(rolePermissions[currentUser.nivelAcesso]?.[permKey]);
+    }
+
+    function generateHash(seed) {
+      let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+      for (let i = 0; i < seed.length; i++) {
+        const ch = seed.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      const hex = ((h1 >>> 0).toString(16) + (h2 >>> 0).toString(16)).toUpperCase().padStart(16, '0');
+      return `SHA256-${hex}${Date.now().toString(16).toUpperCase()}`;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const styles = {
+        success: 'bg-emerald-600 text-white border-emerald-500',
+        error: 'bg-rose-600 text-white border-rose-500',
+        warning: 'bg-amber-500 text-slate-950 border-amber-400',
+        info: 'bg-slate-900 text-white border-slate-700'
+      };
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-xl border text-xs font-bold transition-all duration-300 ${styles[type] || styles.info}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+      }, 3600);
+    }
+
+    // =========================================================================
+    // AUTENTICAÇÃO E AUTOATENDIMENTO
+    // =========================================================================
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('login-form');
+      const ssForm = document.getElementById('selfservice-form');
+      const btnLogin = document.getElementById('auth-tab-login');
+      const btnSS = document.getElementById('auth-tab-selfservice');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        ssForm.classList.add('hidden');
+        btnLogin.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold transition bg-white text-slate-900 shadow-xs';
+        btnSS.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900';
+      } else {
+        loginForm.classList.add('hidden');
+        ssForm.classList.remove('hidden');
+        btnSS.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold transition bg-white text-slate-900 shadow-xs';
+        btnLogin.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900';
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const loginVal = document.getElementById('login-username').value.trim().toLowerCase();
+      const passVal = document.getElementById('login-password').value;
+      const passHash = await sha256Hex(passVal);
+
+      const candidate = users.find(u =>
+        u.login.toLowerCase() === loginVal || u.cpf === loginVal
+      );
+
+      if (!candidate) {
+        showToast('Usuário ou senha inválidos.', 'error');
+        return;
+      }
+
+      if (!candidate.ativo) {
+        showToast('Acesso bloqueado: colaborador inativo no cadastro.', 'error');
+        return;
+      }
+
+      const validPassword = candidate.senhaHash
+        ? candidate.senhaHash === passHash
+        : candidate.senha === passVal;
+
+      if (!validPassword) {
+        showToast('Usuário ou senha inválidos.', 'error');
+        return;
+      }
+
+      document.getElementById('login-password').value = '';
+      enterSystemAs(candidate);
+    }
+
+    async function handleSelfServicePassword(e) {
+      e.preventDefault();
+      const cpf = document.getElementById('ss-cpf').value.trim();
+      const ag = document.getElementById('ss-agencia').value.trim();
+      const conta = document.getElementById('ss-conta').value.trim();
+      const p1 = document.getElementById('ss-new-pass').value;
+      const p2 = document.getElementById('ss-confirm-pass').value;
+
+      if (p1 !== p2) {
+        showToast('As senhas digitadas não conferem.', 'error');
+        return;
+      }
+
+      const user = users.find(u => u.ativo && u.cpf === cpf && u.agencia === ag && u.conta === conta);
+      if (!user) {
+        showToast('Dados cadastrais/bancários não conferem com a base ativa.', 'error');
+        return;
+      }
+
+      user.senhaHash = await sha256Hex(p1);
+      delete user.senha;
+      saveStateToStorage();
+
+      showToast(`Senha redefinida com sucesso para ${user.nome}! Faça login para continuar.`, 'success');
+      switchAuthTab('login');
+      document.getElementById('login-username').value = user.login;
+      document.getElementById('login-password').value = '';
+    }
+
+    function enterSystemAs(user) {
+      currentUser = user;
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+      syncShellWithUserAndPermissions();
+      openNewTripForm();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('app-shell').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('login-password').value = '';
+    }
+
+    function getRoleLabel(role) {
+      const map = {
+        administrador: 'Administrador',
+        gestor: 'Gestor',
+        diretoria: 'Diretoria',
+        usuario: 'Usuário Comum'
+      };
+      return map[role] || role;
+    }
+
+    // =========================================================================
+    // SINCRONIZAÇÃO DE MENU, TOPBAR E PERMISSÕES RBAC
+    // =========================================================================
+    function syncShellWithUserAndPermissions() {
+      if (!currentUser) return;
+
+      // Atualiza rodapé da sidebar
+      const initials = currentUser.nome.split(' ').slice(0, 2).map(s => s[0]).join('');
+      document.getElementById('sidebar-user-avatar').textContent = initials;
+      document.getElementById('sidebar-user-name').textContent = currentUser.nome;
+      document.getElementById('sidebar-user-role').textContent = getRoleLabel(currentUser.nivelAcesso);
+      document.getElementById('header-fuel-rate').textContent = formatBRL(systemConfig.fuelQuotaDefaultValue);
+
+      // Constrói navegação lateral conforme permissões ativas
+      const hasAnySettingsAccess =
+        hasPermission('config_combustivel') ||
+        hasPermission('manage_rbac') ||
+        hasPermission('manage_whitelabel');
+
+      const navItems = [
+        { id: 'dashboard', label: 'Dashboard Analítico', icon: 'layout-dashboard', visible: hasPermission('view_dashboard') },
+        { id: 'nova-solicitacao', label: 'Nova Solicitação de Diária', icon: 'file-plus-2', visible: hasPermission('create_trip') },
+        { id: 'solicitacoes', label: currentUser.nivelAcesso === 'usuario' ? 'Minhas Diárias' : 'Solicitações & Aprovações', icon: 'clipboard-list', visible: true },
+        { id: 'relatorios', label: 'Relatórios por Período', icon: 'bar-chart-2', visible: hasPermission('view_reports') },
+        { id: 'cadastros', label: 'Cadastros Base', icon: 'database', visible: hasPermission('manage_master_data') },
+        { id: 'configuracoes', label: 'Configurações do Sistema', icon: 'settings', visible: hasAnySettingsAccess }
+      ];
+
+      const navContainer = document.getElementById('sidebar-nav');
+      navContainer.innerHTML = navItems
+        .filter(item => item.visible)
+        .map(item => `
+          <button
+            type="button"
+            onclick="navigateTo('${item.id}')"
+            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
+              currentView === item.id
+                ? 'bg-brand text-white shadow-xs'
+                : 'text-slate-700 hover:bg-slate-100'
+            }"
+          >
+            <i data-lucide="${item.icon}" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">${item.label}</span>
+          </button>
+        `)
+        .join('');
+
+      // Se a view atual deixou de ser visível após troca de perfil, redireciona
+      const stillVisible = navItems.some(i => i.id === currentView && i.visible);
+      if (!stillVisible) {
+        navigateTo('nova-solicitacao');
+        return;
+      }
+
+      // Re-aplica regras na view atual
+      if (currentView === 'nova-solicitacao') applyRoleRulesToTripForm();
+      if (currentView === 'solicitacoes') renderTripsList();
+      if (currentView === 'configuracoes') renderSettingsView();
+
+      lucide.createIcons();
+    }
+
+    function navigateTo(viewId) {
+      currentView = viewId;
+      toggleMobileSidebar(false);
+
+      const titles = {
+        'dashboard': ['Dashboard Executivo', 'Indicadores consolidados de diárias, destinos e combustível'],
+        'nova-solicitacao': ['Nova Solicitação de Diária', 'Roteiro de destinos, veículo/deslocamento e adicional de combustível'],
+        'solicitacoes': [currentUser?.nivelAcesso === 'usuario' ? 'Minhas Solicitações de Diárias' : 'Gestão de Solicitações & Diretoria', 'Acompanhamento de status, autorizações eletrônicas e espelho PDF'],
+        'relatorios': ['Relatórios por Período', 'Consolidação financeira e exportação CSV'],
+        'cadastros': ['Cadastros Base do Sistema', 'Usuários, municípios de Alagoas, setores e veículos da frota'],
+        'configuracoes': ['Configurações do Sistema', 'Parâmetros financeiros de combustível, permissões RBAC e identidade visual']
+      };
+
+      document.getElementById('page-title').textContent = titles[viewId]?.[0] || 'SisDiárias';
+      document.getElementById('page-subtitle').textContent = titles[viewId]?.[1] || '';
+
+      ['dashboard', 'nova-solicitacao', 'solicitacoes', 'relatorios', 'cadastros', 'configuracoes'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewId);
+      });
+
+      syncShellWithUserAndPermissions();
+
+      if (viewId === 'dashboard') renderDashboard();
+      if (viewId === 'solicitacoes') renderTripsList();
+      if (viewId === 'relatorios') renderReports();
+      if (viewId === 'cadastros') switchMasterDataTab(currentMasterDataTab);
+      if (viewId === 'configuracoes') renderSettingsView();
+
+      lucide.createIcons();
+    }
+
+    function toggleMobileSidebar(open) {
+      const sb = document.getElementById('app-sidebar');
+      const bd = document.getElementById('sidebar-backdrop');
+      if (open) {
+        sb.classList.remove('-translate-x-full');
+        bd.classList.remove('hidden');
+      } else {
+        sb.classList.add('-translate-x-full');
+        bd.classList.add('hidden');
+      }
+    }
+
+    // =========================================================================
+    // FORMULÁRIO DE NOVA SOLICITAÇÃO / EDIÇÃO DE DIÁRIA
+    // =========================================================================
+    function openNewTripForm(tripToEdit = null) {
+      editingTripId = tripToEdit ? tripToEdit.id : null;
+      currentView = 'nova-solicitacao';
+
+      const pill = document.getElementById('editing-mode-pill');
+      pill.classList.toggle('hidden', !tripToEdit);
+
+      // Popula veículos
+      const vehSelect = document.getElementById('req-vehicle-id');
+      vehSelect.innerHTML = vehicles
+        .filter(v => v.ativo)
+        .map(v => `<option value="${v.id}">${v.marca} ${v.modelo} — ${v.placa} (${v.combustivel})</option>`)
+        .join('');
+
+      if (tripToEdit) {
+        document.getElementById('req-identifier').value = tripToEdit.codigo;
+        document.getElementById('req-start-date').value = tripToEdit.startDate;
+        document.getElementById('req-end-date').value = tripToEdit.endDate;
+        document.getElementById('req-transport-mode').value = tripToEdit.transportMode;
+        document.getElementById('req-vehicle-id').value = tripToEdit.vehicleId || vehicles[0]?.id;
+        document.getElementById('req-route-note').value = tripToEdit.routeNote || '';
+        document.getElementById('req-fuel-quotas').value = tripToEdit.fuelQuotas || 0;
+        document.getElementById('req-fuel-note').value = tripToEdit.fuelNote || '';
+        document.getElementById('req-justification').value = tripToEdit.justification || '';
+        formAttachments = [...(tripToEdit.attachments || [])];
+
+        const destContainer = document.getElementById('req-destinations-container');
+        destContainer.innerHTML = '';
+        tripToEdit.destinations.forEach(d => addReqDestinationRow(d.munId, d.qtdMeia, d.qtdPernoite));
+      } else {
+        const nextNum = 29 + trips.length;
+        const todayIso = '2026-11-18';
+        document.getElementById('req-identifier').value = `${nextNum}-VIAGEM_${todayIso.replaceAll('-', '')}`;
+        document.getElementById('req-start-date').value = todayIso;
+        document.getElementById('req-end-date').value = '2026-11-19';
+        document.getElementById('req-transport-mode').value = 'Veículo Oficial';
+        document.getElementById('req-route-note').value = '';
+        document.getElementById('req-fuel-quotas').value = 1;
+        document.getElementById('req-fuel-note').value = '';
+        document.getElementById('req-justification').value = 'VISTORIA TÉCNICA E ATENDIMENTO OPERACIONAL JUNTO AO MUNICÍPIO DESTINO.';
+        formAttachments = [];
+
+        const destContainer = document.getElementById('req-destinations-container');
+        destContainer.innerHTML = '';
+        addReqDestinationRow('m-3', 1, 1); // ARAPIRACA padrão
+      }
+
+      navigateTo('nova-solicitacao');
+      applyRoleRulesToTripForm();
+      onReqTransportModeChange();
+      onReqVehicleChange();
+      validateReqDates();
+      updateReqJustCounter();
+      renderReqAttachments();
+      recalculateRequestTotals();
+    }
+
+    function applyRoleRulesToTripForm() {
+      if (!currentUser) return;
+
+      const canEditId = hasPermission('edit_identifier');
+      const canEmitOthers = hasPermission('create_for_others');
+
+      // Banner superior do formulário
+      const notice = document.getElementById('form-role-notice');
+      notice.className = 'mb-5 p-3.5 rounded-2xl border bg-slate-50 border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2';
+      notice.innerHTML = `
+        <div class="flex items-center gap-2 text-slate-700">
+          <i data-lucide="info" class="w-4 h-4 text-brand shrink-0"></i>
+          <span>
+            Logado como <strong>${currentUser.nome}</strong> (${getRoleLabel(currentUser.nivelAcesso)}).
+            Identificador Único: <strong>${canEditId ? 'Editável' : 'Bloqueado'}</strong> •
+            Beneficiário: <strong>${canEmitOthers ? 'Qualquer colaborador ativo' : 'Somente próprio cadastro'}</strong>.
+          </span>
+        </div>
+        <span class="text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-lg">
+          Cota Combustível: ${formatBRL(systemConfig.fuelQuotaDefaultValue)}
+        </span>
+      `;
+
+      // Campo Identificador Único
+      const idInput = document.getElementById('req-identifier');
+      const idBadge = document.getElementById('id-field-badge');
+      const idHint = document.getElementById('id-field-hint');
+      if (canEditId) {
+        idInput.readOnly = false;
+        idInput.className = 'w-full px-3.5 py-2.5 rounded-xl border border-amber-400 bg-amber-50/40 text-slate-900 text-sm font-mono font-bold outline-none';
+        idBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        idBadge.textContent = 'Editável';
+        idHint.textContent = 'Permissão ativa para editar o código da viagem.';
+      } else {
+        idInput.readOnly = true;
+        idInput.className = 'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 text-sm font-mono font-bold cursor-not-allowed outline-none';
+        idBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600';
+        idBadge.textContent = 'Bloqueado';
+        idHint.textContent = 'Gerado automaticamente pelo sistema.';
+      }
+
+      // Campo Beneficiário
+      const benSelect = document.getElementById('req-beneficiary');
+      const benBadge = document.getElementById('ben-field-badge');
+      const benHint = document.getElementById('ben-field-hint');
+      const prevVal = benSelect.value;
+
+      if (canEmitOthers) {
+        benSelect.disabled = false;
+        benSelect.className = 'w-full px-3.5 py-2.5 rounded-xl border border-blue-300 bg-white text-slate-900 text-sm font-semibold outline-none';
+        benSelect.innerHTML = users
+          .filter(u => u.ativo)
+          .map(u => `<option value="${u.id}">${u.nome} — ${u.setor}</option>`)
+          .join('');
+        if (users.some(u => u.id === prevVal)) benSelect.value = prevVal;
+        benBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+        benBadge.textContent = 'Equipe Liberada';
+        benHint.textContent = 'Você pode emitir diárias para qualquer servidor ativo.';
+      } else {
+        benSelect.innerHTML = `<option value="${currentUser.id}">${currentUser.nome} — ${currentUser.setor}</option>`;
+        benSelect.disabled = true;
+        benSelect.className = 'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 text-sm font-semibold cursor-not-allowed outline-none';
+        benBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600';
+        benBadge.textContent = 'Próprio Usuário';
+        benHint.textContent = 'Solicitação vinculada exclusivamente ao seu cadastro.';
+      }
+
+      // Atualiza parâmetros do Bloco de Combustível Extra
+      const fuelInput = document.getElementById('req-fuel-quotas');
+      fuelInput.max = systemConfig.fuelMaxQuotasPerTrip;
+      document.getElementById('fuel-max-quotas-hint').textContent = `Limite máximo: ${systemConfig.fuelMaxQuotasPerTrip} cotas por viagem`;
+      document.getElementById('fuel-block-unit-badge').textContent = formatBRL(systemConfig.fuelQuotaDefaultValue);
+      document.getElementById('fuel-block-unit-display').textContent = formatBRL(systemConfig.fuelQuotaDefaultValue);
+
+      const fuelNoteInput = document.getElementById('req-fuel-note');
+      const fuelNoteBadge = document.getElementById('fuel-note-required-badge');
+      if (systemConfig.fuelRequireJustification) {
+        fuelNoteBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        fuelNoteBadge.textContent = 'Obrigatória se cotas > 0';
+      } else {
+        fuelNoteBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600';
+        fuelNoteBadge.textContent = 'Opcional';
+      }
+
+      onReqBeneficiaryChange();
+      recalculateRequestTotals();
+    }
+
+    function onReqBeneficiaryChange() {
+      const benId = document.getElementById('req-beneficiary').value;
+      const ben = users.find(u => u.id === benId) || currentUser;
+      const box = document.getElementById('req-beneficiary-bank-card');
+      if (!ben) return;
+
+      box.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">CPF / Setor</span>
+            <span class="font-bold text-slate-900 block">${ben.cpf}</span>
+            <span class="text-[11px] text-slate-600">${ben.setor}</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Instituição Bancária</span>
+            <span class="font-bold text-slate-900 block">${ben.banco}</span>
+            <span class="text-[11px] text-slate-600">${ben.tipoConta}</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Agência & Conta</span>
+            <span class="font-bold text-slate-900 block">Ag: ${ben.agencia}</span>
+            <span class="text-[11px] text-slate-600">Cc/Poupança: ${ben.conta}</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Chave PIX (${ben.tipoChavePix})</span>
+            <span class="font-mono font-bold text-brand block break-all">${ben.chavePix}</span>
+          </div>
+        </div>
+      `;
+      updateRequestSummary();
+    }
+
+    function validateReqDates() {
+      const start = document.getElementById('req-start-date').value;
+      const end = document.getElementById('req-end-date').value;
+      const el = document.getElementById('req-date-status');
+
+      if (!start || !end || end < start) {
+        el.className = 'px-3.5 py-2.5 rounded-xl border border-rose-300 bg-rose-50 text-rose-800 text-xs font-bold flex items-center gap-2';
+        el.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span>Período inválido!</span>';
+        lucide.createIcons();
+        return false;
+      }
+
+      const d1 = new Date(start + 'T00:00:00');
+      const d2 = new Date(end + 'T00:00:00');
+      const days = Math.round((d2 - d1) / 86400000) + 1;
+      el.className = 'px-3.5 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-2';
+      el.innerHTML = `<i data-lucide="calendar-check" class="w-4 h-4 shrink-0"></i><span>${days} dia(s) de viagem</span>`;
+      updateRequestSummary();
+      lucide.createIcons();
+      return true;
+    }
+
+    function addReqDestinationRow(defaultMunId = 'm-20', defaultMeia = 1, defaultPernoite = 0) {
+      const container = document.getElementById('req-destinations-container');
+      const rowId = `dest-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const activeMuns = municipalities.filter(m => m.ativo);
+
+      const div = document.createElement('div');
+      div.id = rowId;
+      div.className = 'req-dest-row grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3.5 rounded-2xl bg-slate-50 border border-slate-200';
+      div.innerHTML = `
+        <div class="md:col-span-5">
+          <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Município Destino</label>
+          <select onchange="onReqDestRowChange('${rowId}')" class="dest-mun-select w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800">
+            ${activeMuns.map(m => `
+              <option value="${m.id}" ${m.id === defaultMunId ? 'selected' : ''}>
+                ${m.nome} (Área ${m.area} • Meia: ${formatBRL(m.meiaDiaria)} | Pern: ${formatBRL(m.pernoite)})
+              </option>
+            `).join('')}
+          </select>
+          <div class="dest-mun-note text-[10px] text-slate-500 mt-1"></div>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Meias (1x)</label>
+          <input type="number" min="0" max="30" value="${defaultMeia}" oninput="onReqDestRowChange('${rowId}')" class="dest-meia-input w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-extrabold text-center" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Pernoites (2x)</label>
+          <input type="number" min="0" max="30" value="${defaultPernoite}" oninput="onReqDestRowChange('${rowId}')" class="dest-pern-input w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-extrabold text-center" />
+        </div>
+        <div class="md:col-span-2 text-left md:text-right">
+          <span class="block text-[10px] font-bold uppercase text-slate-400">Subtotal</span>
+          <span class="dest-row-subtotal text-sm font-extrabold text-brand">R$ 0,00</span>
+        </div>
+        <div class="md:col-span-1 flex justify-end">
+          <button type="button" onclick="removeReqDestRow('${rowId}')" class="p-2 rounded-xl text-rose-600 hover:bg-rose-100 transition" title="Remover">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `;
+      container.appendChild(div);
+      onReqDestRowChange(rowId);
+      lucide.createIcons();
+    }
+
+    function removeReqDestRow(rowId) {
+      const container = document.getElementById('req-destinations-container');
+      if (container.children.length <= 1) {
+        showToast('É necessário ao menos 1 município de destino.', 'warning');
+        return;
+      }
+      document.getElementById(rowId)?.remove();
+      recalculateRequestTotals();
+    }
+
+    function onReqDestRowChange(rowId) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+      const mun = municipalities.find(m => m.id === row.querySelector('.dest-mun-select').value);
+      const meiaInp = row.querySelector('.dest-meia-input');
+      const pernInp = row.querySelector('.dest-pern-input');
+      const note = row.querySelector('.dest-mun-note');
+
+      if (mun && !mun.permitePernoite) {
+        pernInp.value = 0;
+        pernInp.disabled = true;
+        pernInp.classList.add('bg-slate-100', 'text-slate-400');
+        note.innerHTML = '<span class="text-amber-700 font-semibold">Entorno metropolitano: somente meia diária.</span>';
+      } else if (mun) {
+        pernInp.disabled = false;
+        pernInp.classList.remove('bg-slate-100', 'text-slate-400');
+        note.textContent = `Base: Meia ${formatBRL(mun.meiaDiaria)} • Pernoite ${formatBRL(mun.pernoite)}`;
+      }
+
+      const sub = mun ? (Number(meiaInp.value || 0) * mun.meiaDiaria) + (Number(pernInp.value || 0) * mun.pernoite) : 0;
+      row.querySelector('.dest-row-subtotal').textContent = formatBRL(sub);
+      recalculateRequestTotals();
+    }
+
+    function onReqTransportModeChange() {
+      const mode = document.getElementById('req-transport-mode').value;
+      const isOfficial = mode === 'Veículo Oficial';
+      document.getElementById('req-official-vehicle-group').classList.toggle('hidden', !isOfficial);
+      document.getElementById('req-vehicle-specs').classList.toggle('hidden', !isOfficial);
+      updateRequestSummary();
+    }
+
+    function onReqVehicleChange() {
+      const veh = vehicles.find(v => v.id === document.getElementById('req-vehicle-id').value);
+      const box = document.getElementById('req-vehicle-specs');
+      if (!veh) return;
+      box.innerHTML = `
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Marca / Modelo</span><strong class="text-slate-900">${veh.marca} ${veh.modelo}</strong></div>
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Placa</span><strong class="font-mono text-brand">${veh.placa}</strong></div>
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Chassi</span><span class="font-mono text-slate-700">${veh.chassi}</span></div>
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Combustível</span><span class="px-2 py-0.5 rounded bg-slate-200 font-bold text-slate-800">${veh.combustivel}</span></div>
+      `;
+      updateRequestSummary();
+    }
+
+    function updateReqJustCounter() {
+      const ta = document.getElementById('req-justification');
+      document.getElementById('req-just-counter').textContent = `${ta.value.length} / 500`;
+    }
+
+    function handleReqFileUpload(e) {
+      Array.from(e.target.files || []).forEach(f => {
+        formAttachments.push({
+          name: f.name,
+          type: f.type,
+          size: `${Math.max(1, Math.round(f.size / 1024))} KB`
+        });
+      });
+      e.target.value = '';
+      renderReqAttachments();
+    }
+
+    function renderReqAttachments() {
+      const list = document.getElementById('req-attachments-list');
+      list.innerHTML = formAttachments.map((att, idx) => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+          <div class="truncate pr-2">
+            <span class="font-bold text-slate-800 block truncate">${att.name}</span>
+            <span class="text-[10px] text-slate-500">${att.size}</span>
+          </div>
+          <button type="button" onclick="formAttachments.splice(${idx}, 1); renderReqAttachments();" class="text-rose-600 hover:bg-rose-50 p-1 rounded-lg">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function recalculateRequestTotals() {
+      let totalMeias = 0;
+      let totalPernoites = 0;
+      let subtotalDiarias = 0;
+
+      document.querySelectorAll('.req-dest-row').forEach(row => {
+        const mun = municipalities.find(m => m.id === row.querySelector('.dest-mun-select').value);
+        const qM = Math.max(0, Number(row.querySelector('.dest-meia-input').value || 0));
+        const qP = Math.max(0, Number(row.querySelector('.dest-pern-input').value || 0));
+        totalMeias += qM;
+        totalPernoites += qP;
+        if (mun) subtotalDiarias += (qM * mun.meiaDiaria) + (qP * mun.pernoite);
+      });
+
+      let fuelQuotas = Math.max(0, Number(document.getElementById('req-fuel-quotas').value || 0));
+      if (fuelQuotas > systemConfig.fuelMaxQuotasPerTrip) {
+        fuelQuotas = systemConfig.fuelMaxQuotasPerTrip;
+        document.getElementById('req-fuel-quotas').value = fuelQuotas;
+        showToast(`Limite máximo de ${systemConfig.fuelMaxQuotasPerTrip} cotas aplicado.`, 'warning');
+      }
+
+      const unitFuel = systemConfig.fuelQuotaDefaultValue;
+      const subtotalFuel = fuelQuotas * unitFuel;
+      const grandTotal = subtotalDiarias + subtotalFuel;
+
+      document.getElementById('fuel-block-subtotal').textContent = formatBRL(subtotalFuel);
+      document.getElementById('sum-box-meias').textContent = `${totalMeias} un.`;
+      document.getElementById('sum-box-pernoites').textContent = `${totalPernoites} un.`;
+      document.getElementById('sum-box-diarias-val').textContent = formatBRL(subtotalDiarias);
+      document.getElementById('sum-box-fuel-qtd').textContent = fuelQuotas;
+      document.getElementById('sum-box-fuel-val').textContent = formatBRL(subtotalFuel);
+      document.getElementById('sum-box-total').textContent = formatBRL(grandTotal);
+
+      updateRequestSummary();
+      return { totalMeias, totalPernoites, subtotalDiarias, fuelQuotas, unitFuel, subtotalFuel, grandTotal };
+    }
+
+    function updateRequestSummary() {
+      const code = document.getElementById('req-identifier').value.trim() || '-';
+      const ben = users.find(u => u.id === document.getElementById('req-beneficiary').value) || currentUser;
+      const s = document.getElementById('req-start-date').value;
+      const e = document.getElementById('req-end-date').value;
+      const mode = document.getElementById('req-transport-mode').value;
+
+      document.getElementById('sum-box-code').textContent = code;
+      document.getElementById('sum-box-ben').textContent = ben ? ben.nome : '-';
+      document.getElementById('sum-box-dates').textContent = `${formatDateBR(s)} a ${formatDateBR(e)}`;
+      document.getElementById('sum-box-transport').textContent = mode;
+    }
+
+    function setFormSubmitMode(mode) {
+      formSubmitMode = mode;
+    }
+
+    function handleTripFormSubmit(e) {
+      e.preventDefault();
+      if (!validateReqDates()) {
+        showToast('Corrija as datas de saída e retorno.', 'error');
+        return;
+      }
+
+      const totals = recalculateRequestTotals();
+      if (totals.totalMeias === 0 && totals.totalPernoites === 0) {
+        showToast('Informe ao menos 1 meia diária ou 1 pernoite.', 'error');
+        return;
+      }
+
+      const fuelNote = document.getElementById('req-fuel-note').value.trim();
+      if (systemConfig.fuelRequireJustification && totals.fuelQuotas > 0 && !fuelNote) {
+        showToast('A configuração vigente exige justificativa para abastecimento extra.', 'warning');
+        document.getElementById('req-fuel-note').focus();
+        return;
+      }
+
+      const destinations = Array.from(document.querySelectorAll('.req-dest-row')).map(row => ({
+        munId: row.querySelector('.dest-mun-select').value,
+        qtdMeia: Math.max(0, Number(row.querySelector('.dest-meia-input').value || 0)),
+        qtdPernoite: Math.max(0, Number(row.querySelector('.dest-pern-input').value || 0))
+      }));
+
+      const payload = {
+        id: editingTripId || `trip-${Date.now()}`,
+        codigo: document.getElementById('req-identifier').value.trim(),
+        beneficiaryId: document.getElementById('req-beneficiary').value,
+        startDate: document.getElementById('req-start-date').value,
+        endDate: document.getElementById('req-end-date').value,
+        transportMode: document.getElementById('req-transport-mode').value,
+        vehicleId: document.getElementById('req-vehicle-id').value,
+        routeNote: document.getElementById('req-route-note').value.trim(),
+        fuelQuotas: totals.fuelQuotas,
+        fuelUnitValueApplied: totals.unitFuel,
+        fuelNote,
+        destinations,
+        justification: document.getElementById('req-justification').value.trim(),
+        attachments: [...formAttachments],
+        status: 'RASCUNHO',
+        requesterSignature: null,
+        directorApproval: null,
+        cancellation: null
+      };
+
+      if (formSubmitMode === 'draft') {
+        upsertTrip(payload);
+        showToast('Solicitação salva como Rascunho!', 'success');
+        navigateTo('solicitacoes');
+        return;
+      }
+
+      // Abre modal de Assinatura Digital do Solicitante
+      openAuthActionModal({
+        action: 'SIGN_REQUESTER',
+        tripPayload: payload,
+        title: 'Assinatura Digital do Pedido',
+        summaryHtml: `
+          <div><strong>Código:</strong> ${payload.codigo}</div>
+          <div><strong>Valor Diárias:</strong> ${formatBRL(totals.subtotalDiarias)}</div>
+          <div><strong>Abastecimento Extra:</strong> ${totals.fuelQuotas}x ${formatBRL(totals.unitFuel)} = ${formatBRL(totals.subtotalFuel)}</div>
+          <div class="pt-1 border-t border-slate-200"><strong>Total Geral:</strong> <span class="text-brand font-extrabold">${formatBRL(totals.grandTotal)}</span></div>
+        `,
+        requireReason: false,
+        btnLabel: 'Assinar e Enviar para Diretoria'
+      });
+    }
+
+    function upsertTrip(tripObj) {
+      const idx = trips.findIndex(t => t.id === tripObj.id);
+      if (idx >= 0) trips[idx] = tripObj;
+      else trips.unshift(tripObj);
+      saveStateToStorage();
+    }
+
+    // =========================================================================
+    // LISTA DE SOLICITAÇÕES, APROVAÇÃO DIRETORIA E CANCELAMENTO
+    // =========================================================================
+    function computeTripFinancials(trip) {
+      let totalMeias = 0;
+      let totalPernoites = 0;
+      let diariasTotal = 0;
+
+      trip.destinations.forEach(d => {
+        const mun = municipalities.find(m => m.id === d.munId);
+        totalMeias += d.qtdMeia;
+        totalPernoites += d.qtdPernoite;
+        if (mun) {
+          diariasTotal += (d.qtdMeia * mun.meiaDiaria) + (d.qtdPernoite * mun.pernoite);
+        }
+      });
+
+      const unitFuel = trip.fuelUnitValueApplied ?? systemConfig.fuelQuotaDefaultValue;
+      const fuelTotal = (trip.fuelQuotas || 0) * unitFuel;
+      return {
+        totalMeias,
+        totalPernoites,
+        diariasTotal,
+        unitFuel,
+        fuelTotal,
+        grandTotal: diariasTotal + fuelTotal
+      };
+    }
+
+    function renderTripsList() {
+      const container = document.getElementById('trips-cards-container');
+      const query = (document.getElementById('filter-trips-search')?.value || '').toLowerCase();
+      const statusFilter = document.getElementById('filter-trips-status')?.value || 'ALL';
+
+      let visibleTrips = trips.filter(t => {
+        if (currentUser?.nivelAcesso === 'usuario' && t.beneficiaryId !== currentUser.id) return false;
+        if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+        const ben = users.find(u => u.id === t.beneficiaryId);
+        const destNames = t.destinations.map(d => municipalities.find(m => m.id === d.munId)?.nome || '').join(' ');
+        const hay = `${t.codigo} ${ben?.nome || ''} ${destNames}`.toLowerCase();
+        return hay.includes(query);
+      });
+
+      if (visibleTrips.length === 0) {
+        container.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">Nenhuma solicitação encontrada para os filtros aplicados.</div>`;
+        return;
+      }
+
+      const statusBadgeMap = {
+        RASCUNHO: 'bg-slate-100 text-slate-700 border-slate-300',
+        AGUARDANDO_DIRETORIA: 'bg-amber-100 text-amber-900 border-amber-300',
+        AUTORIZADA: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+        REJEITADA: 'bg-rose-100 text-rose-900 border-rose-300',
+        CANCELADA: 'bg-rose-50 text-rose-800 border-rose-300'
+      };
+
+      container.innerHTML = visibleTrips.map(t => {
+        const ben = users.find(u => u.id === t.beneficiaryId);
+        const fin = computeTripFinancials(t);
+        const veh = vehicles.find(v => v.id === t.vehicleId);
+        const destSummary = t.destinations.map(d => {
+          const m = municipalities.find(x => x.id === d.munId);
+          return `${m?.nome || '-'} (${d.qtdMeia}M / ${d.qtdPernoite}P)`;
+        }).join(' • ');
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono font-extrabold text-sm text-slate-900">${t.codigo}</span>
+                  <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${statusBadgeMap[t.status] || ''}">
+                    ${t.status.replace('_', ' ')}
+                  </span>
+                </div>
+                <div class="text-xs font-bold text-slate-700 mt-1">${ben?.nome || '-'} <span class="font-normal text-slate-500">(${ben?.setor || '-'})</span></div>
+              </div>
+
+              <div class="text-left sm:text-right">
+                <div class="text-lg font-extrabold text-brand">${formatBRL(fin.grandTotal)}</div>
+                <div class="text-[11px] text-slate-500">
+                  Diárias: <strong>${formatBRL(fin.diariasTotal)}</strong> • Combustível: <strong>${formatBRL(fin.fuelTotal)}</strong> (${t.fuelQuotas}x ${formatBRL(fin.unitFuel)})
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block">Período & Roteiro</span>
+                <div class="font-bold text-slate-800">${formatDateBR(t.startDate)} a ${formatDateBR(t.endDate)}</div>
+                <div class="text-[11px] text-slate-600 mt-0.5">${destSummary}</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block">Deslocamento & Veículo</span>
+                <div class="font-bold text-slate-800">${t.transportMode}</div>
+                <div class="text-[11px] text-slate-600 mt-0.5">${t.transportMode === 'Veículo Oficial' && veh ? `${veh.marca} ${veh.modelo} (${veh.placa})` : (t.routeNote || 'Sem observação')}</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-amber-50/50 border border-amber-200/80">
+                <span class="text-[10px] font-bold uppercase text-amber-800 block">Abastecimento Extra</span>
+                <div class="font-bold text-amber-950">${t.fuelQuotas} cota(s) × ${formatBRL(fin.unitFuel)} = ${formatBRL(fin.fuelTotal)}</div>
+                <div class="text-[11px] text-amber-900/80 mt-0.5 truncate">${t.fuelNote || 'Sem justificativa extra'}</div>
+              </div>
+            </div>
+
+            ${t.cancellation ? `
+              <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900">
+                <strong>Cancelada por ${t.cancellation.byName} em ${t.cancellation.timestamp}:</strong> ${t.cancellation.reason}
+              </div>
+            ` : ''}
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+              <div class="text-[11px] text-slate-500">
+                ${t.requesterSignature ? `Assinada por <strong>${t.requesterSignature.signerName}</strong> em ${t.requesterSignature.timestamp}` : 'Aguardando assinatura do solicitante'}
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="openVoucherForTrip('${t.id}')" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i> Espelho PDF
+                </button>
+
+                ${t.status === 'RASCUNHO' ? `
+                  <button type="button" onclick="editTripById('${t.id}')" class="px-3 py-1.5 rounded-xl bg-brand text-white text-xs font-bold">
+                    Continuar / Assinar
+                  </button>
+                ` : ''}
+
+                ${t.status === 'AGUARDANDO_DIRETORIA' && hasPermission('approve_director') ? `
+                  <button type="button" onclick="promptDirectorDecision('${t.id}', 'APPROVE')" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Autorizar (Diretoria)
+                  </button>
+                  <button type="button" onclick="promptDirectorDecision('${t.id}', 'REJECT')" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold">
+                    Rejeitar
+                  </button>
+                ` : ''}
+
+                ${t.status !== 'CANCELADA' && hasPermission('cancel_trip') ? `
+                  <button type="button" onclick="promptCancelTrip('${t.id}')" class="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold">
+                    Cancelar Diária
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function editTripById(id) {
+      const t = trips.find(x => x.id === id);
+      if (t) openNewTripForm(t);
+    }
+
+    function promptDirectorDecision(tripId, decision) {
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+      const fin = computeTripFinancials(trip);
+      openAuthActionModal({
+        action: decision === 'APPROVE' ? 'DIRECTOR_APPROVE' : 'DIRECTOR_REJECT',
+        tripId,
+        title: decision === 'APPROVE' ? 'Autorização Eletrônica da Diretoria' : 'Rejeitar Solicitação de Diária',
+        summaryHtml: `
+          <div><strong>Solicitação:</strong> ${trip.codigo}</div>
+          <div><strong>Valor Consolidado:</strong> ${formatBRL(fin.grandTotal)}</div>
+        `,
+        requireReason: decision === 'REJECT',
+        btnLabel: decision === 'APPROVE' ? 'Confirmar Autorização' : 'Confirmar Rejeição'
+      });
+    }
+
+    function promptCancelTrip(tripId) {
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+      openAuthActionModal({
+        action: 'CANCEL_TRIP',
+        tripId,
+        title: 'Cancelar Solicitação de Diária',
+        summaryHtml: `<div>Você está cancelando a solicitação <strong>${trip.codigo}</strong>. Esta ação será auditada.</div>`,
+        requireReason: true,
+        btnLabel: 'Confirmar Cancelamento'
+      });
+    }
+
+    // =========================================================================
+    // MODAL DE ASSINATURA / AUTORIZAÇÃO / CANCELAMENTO COM SENHA
+    // =========================================================================
+    function openAuthActionModal(ctx) {
+      pendingAuthModalContext = ctx;
+      document.getElementById('aam-title').textContent = ctx.title;
+      document.getElementById('aam-summary').innerHTML = ctx.summaryHtml;
+      document.getElementById('aam-reason-wrapper').classList.toggle('hidden', !ctx.requireReason);
+      document.getElementById('aam-reason').required = Boolean(ctx.requireReason);
+      document.getElementById('aam-reason').value = '';
+      document.getElementById('aam-password').value = '';
+      document.getElementById('aam-submit-btn').textContent = ctx.btnLabel;
+      document.getElementById('auth-action-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAuthActionModal() {
+      document.getElementById('auth-action-modal').classList.add('hidden');
+      pendingAuthModalContext = null;
+    }
+
+    async function confirmAuthAction(e) {
+      e.preventDefault();
+      if (!pendingAuthModalContext || !currentUser) return;
+
+      const pass = document.getElementById('aam-password').value;
+      const passHash = await sha256Hex(pass);
+      const isValidPass = currentUser.senhaHash
+        ? currentUser.senhaHash === passHash
+        : currentUser.senha === pass;
+
+      if (!isValidPass) {
+        showToast('Senha pessoal incorreta!', 'error');
+        return;
+      }
+
+      const reason = document.getElementById('aam-reason').value.trim();
+      const nowStr = new Date().toLocaleString('pt-BR');
+      const ctx = pendingAuthModalContext;
+
+      if (ctx.action === 'SIGN_REQUESTER') {
+        const p = ctx.tripPayload;
+        p.status = 'AGUARDANDO_DIRETORIA';
+        p.requesterSignature = {
+          signerName: currentUser.nome,
+          signerCpf: currentUser.cpf,
+          timestamp: nowStr,
+          hash: generateHash(`${p.codigo}|${currentUser.cpf}|${nowStr}`)
+        };
+        upsertTrip(p);
+        showToast('Solicitação assinada e enviada para autorização da Diretoria!', 'success');
+        closeAuthActionModal();
+        navigateTo('solicitacoes');
+        return;
+      }
+
+      const trip = trips.find(t => t.id === ctx.tripId);
+      if (!trip) return;
+
+      if (ctx.action === 'DIRECTOR_APPROVE') {
+        trip.status = 'AUTORIZADA';
+        trip.directorApproval = {
+          approverName: currentUser.nome,
+          approverCpf: currentUser.cpf,
+          timestamp: nowStr,
+          hash: generateHash(`${trip.codigo}|DIR|${currentUser.cpf}|${nowStr}`)
+        };
+        showToast('Solicitação AUTORIZADA pela Diretoria!', 'success');
+      } else if (ctx.action === 'DIRECTOR_REJECT') {
+        trip.status = 'REJEITADA';
+        trip.directorApproval = {
+          approverName: currentUser.nome,
+          approverCpf: currentUser.cpf,
+          timestamp: nowStr,
+          reason,
+          hash: generateHash(`${trip.codigo}|REJ|${currentUser.cpf}|${nowStr}`)
+        };
+        showToast('Solicitação rejeitada.', 'warning');
+      } else if (ctx.action === 'CANCEL_TRIP') {
+        trip.status = 'CANCELADA';
+        trip.cancellation = {
+          byName: currentUser.nome,
+          byCpf: currentUser.cpf,
+          timestamp: nowStr,
+          reason,
+          hash: generateHash(`${trip.codigo}|CANC|${currentUser.cpf}|${nowStr}`)
+        };
+        showToast('Diária cancelada e registrada na auditoria.', 'warning');
+      }
+
+      saveStateToStorage();
+      closeAuthActionModal();
+      renderTripsList();
+    }
+
+    // =========================================================================
+    // ESPELHO OFICIAL DE IMPRESSÃO (COM BLOCOS SEPARADOS)
+    // =========================================================================
+    function openVoucherForTrip(tripId) {
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+      const ben = users.find(u => u.id === trip.beneficiaryId);
+      const veh = vehicles.find(v => v.id === trip.vehicleId);
+      const fin = computeTripFinancials(trip);
+      const b = systemConfig.brand;
+
+      document.getElementById('voucher-print-area').innerHTML = `
+        <div class="border-2 border-slate-900 p-5 space-y-4">
+          <div class="flex items-center justify-between border-b-2 border-brand pb-3">
+            <div class="flex items-center gap-3">
+              ${b.logoDataUrl ? `<img src="${b.logoDataUrl}" class="h-12 w-12 object-contain" />` : ''}
+              <div>
+                <div class="text-xs font-extrabold uppercase text-slate-900">${b.companyName}</div>
+                <div class="text-[10px] text-slate-500">CNPJ: ${b.cnpj} • ${b.address}</div>
+                <h1 class="text-sm font-extrabold uppercase text-brand mt-1">${b.systemName} — Solicitação Oficial de Diárias</h1>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] font-bold uppercase text-slate-500 block">Identificador Único</span>
+              <span class="font-mono font-extrabold text-sm bg-slate-100 px-2.5 py-1 border border-slate-400 inline-block">${trip.codigo}</span>
+              <span class="block text-[10px] font-extrabold mt-1">STATUS: ${trip.status.replace('_', ' ')}</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="bg-slate-800 text-white px-2.5 py-1 font-bold uppercase text-[11px]">1. Dados do Beneficiário & Domicílio Bancário</div>
+            <table class="w-full border-collapse border border-slate-400 text-[11px]">
+              <tr>
+                <td class="border border-slate-400 p-2 w-2/3"><strong>Nome:</strong> ${ben?.nome || '-'}</td>
+                <td class="border border-slate-400 p-2 w-1/3"><strong>CPF:</strong> ${ben?.cpf || '-'}</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-400 p-2"><strong>Setor:</strong> ${ben?.setor || '-'}</td>
+                <td class="border border-slate-400 p-2"><strong>Período:</strong> ${formatDateBR(trip.startDate)} a ${formatDateBR(trip.endDate)}</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-400 p-2"><strong>Banco:</strong> ${ben?.banco || '-'} • <strong>Ag:</strong> ${ben?.agencia || '-'}</td>
+                <td class="border border-slate-400 p-2"><strong>${ben?.tipoConta || 'Conta'}:</strong> ${ben?.conta || '-'}</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-400 p-2" colspan="2"><strong>Chave PIX (${ben?.tipoChavePix || '-'}):</strong> ${ben?.chavePix || '-'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div>
+            <div class="bg-slate-800 text-white px-2.5 py-1 font-bold uppercase text-[11px]">2. Deslocamento & Veículo</div>
+            <table class="w-full border-collapse border border-slate-400 text-[11px]">
+              <tr>
+                <td class="border border-slate-400 p-2 w-1/3"><strong>Meio de Transporte:</strong> ${trip.transportMode}</td>
+                <td class="border border-slate-400 p-2 w-2/3"><strong>Veículo Oficial:</strong> ${trip.transportMode === 'Veículo Oficial' && veh ? `${veh.marca} ${veh.modelo} • Placa ${veh.placa} • Chassi ${veh.chassi} (${veh.combustivel})` : 'Não aplicável'}</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-400 p-2" colspan="2"><strong>Observação / Rota:</strong> ${trip.routeNote || 'Conforme roteiro aprovado'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div>
+            <div class="bg-slate-800 text-white px-2.5 py-1 font-bold uppercase text-[11px]">3. Roteiro de Diárias & Adicional de Combustível</div>
+            <table class="w-full border-collapse border border-slate-400 text-[11px]">
+              <thead class="bg-slate-100">
+                <tr>
+                  <th class="border border-slate-400 p-2 text-left">Município Destino</th>
+                  <th class="border border-slate-400 p-2 text-center">Meias (1x)</th>
+                  <th class="border border-slate-400 p-2 text-right">Unit. Meia</th>
+                  <th class="border border-slate-400 p-2 text-center">Pernoites (2x)</th>
+                  <th class="border border-slate-400 p-2 text-right">Unit. Pern.</th>
+                  <th class="border border-slate-400 p-2 text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${trip.destinations.map(d => {
+                  const m = municipalities.find(x => x.id === d.munId);
+                  const sub = m ? (d.qtdMeia * m.meiaDiaria) + (d.qtdPernoite * m.pernoite) : 0;
+                  return `
+                    <tr>
+                      <td class="border border-slate-400 p-2 font-bold">${m?.nome || '-'} (Área ${m?.area || '-'})</td>
+                      <td class="border border-slate-400 p-2 text-center">${d.qtdMeia}</td>
+                      <td class="border border-slate-400 p-2 text-right">${formatBRL(m?.meiaDiaria || 0)}</td>
+                      <td class="border border-slate-400 p-2 text-center">${d.qtdPernoite}</td>
+                      <td class="border border-slate-400 p-2 text-right">${formatBRL(m?.pernoite || 0)}</td>
+                      <td class="border border-slate-400 p-2 text-right font-bold">${formatBRL(sub)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+                <tr class="bg-amber-50/60">
+                  <td class="border border-slate-400 p-2" colspan="5">
+                    <strong>Adicional de Combustível (Abastecimento Extra):</strong> ${trip.fuelQuotas} cota(s) × ${formatBRL(fin.unitFuel)}
+                    ${trip.fuelNote ? `<span class="block text-[10px] text-slate-600">Obs.: ${trip.fuelNote}</span>` : ''}
+                  </td>
+                  <td class="border border-slate-400 p-2 text-right font-bold">${formatBRL(fin.fuelTotal)}</td>
+                </tr>
+                <tr class="bg-slate-100 font-extrabold">
+                  <td class="border border-slate-400 p-2 text-right uppercase" colspan="5">Valor Total Consolidado:</td>
+                  <td class="border border-slate-400 p-2 text-right text-sm">${formatBRL(fin.grandTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div class="bg-slate-800 text-white px-2.5 py-1 font-bold uppercase text-[11px]">4. Justificativa da Viagem</div>
+            <div class="border border-slate-400 p-2.5 text-[11px]">${trip.justification}</div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 pt-1">
+            <div class="border border-slate-400 p-3">
+              <div class="text-[10px] font-bold uppercase text-slate-500">Assinatura Eletrônica do Solicitante:</div>
+              ${trip.requesterSignature ? `
+                <div class="font-bold mt-0.5">${trip.requesterSignature.signerName}</div>
+                <div class="text-[10px]">CPF: ${trip.requesterSignature.signerCpf} • ${trip.requesterSignature.timestamp}</div>
+                <div class="text-[9px] font-mono text-slate-500 break-all mt-1">${trip.requesterSignature.hash}</div>
+              ` : '<div class="italic text-slate-400 py-2">Pendente</div>'}
+            </div>
+            <div class="border border-slate-400 p-3">
+              <div class="text-[10px] font-bold uppercase text-slate-500">Autorização Eletrônica da Diretoria:</div>
+              ${trip.directorApproval ? `
+                <div class="font-bold mt-0.5">${trip.directorApproval.approverName}</div>
+                <div class="text-[10px]">CPF: ${trip.directorApproval.approverCpf} • ${trip.directorApproval.timestamp}</div>
+                <div class="text-[9px] font-mono text-slate-500 break-all mt-1">${trip.directorApproval.hash}</div>
+              ` : '<div class="italic text-slate-400 py-2">Aguardando Diretoria</div>'}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('voucher-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeVoucherModal() {
+      document.getElementById('voucher-modal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // CONFIGURAÇÕES DO SISTEMA (COMBUSTÍVEL EXTRA, RBAC E WHITE-LABEL)
+    // =========================================================================
+    function renderSettingsView() {
+      const canFuel = hasPermission('config_combustivel');
+      const canRbac = hasPermission('manage_rbac');
+      const canBrand = hasPermission('manage_whitelabel');
+      const canBackup = currentUser?.nivelAcesso === 'administrador';
+
+      const tabs = [
+        { id: 'fuel', label: 'Parâmetros Financeiros & Combustível', icon: 'fuel', allowed: canFuel },
+        { id: 'rbac', label: 'Perfis e Permissões (RBAC)', icon: 'shield', allowed: canRbac },
+        { id: 'brand', label: 'Identidade Visual & White-Label', icon: 'palette', allowed: canBrand },
+        { id: 'backup', label: 'Base de Testes (Backup & Reset)', icon: 'hard-drive', allowed: canBackup }
+      ].filter(t => t.allowed);
+
+      if (tabs.length === 0) return;
+
+      if (!tabs.some(t => t.id === currentSettingsTab)) {
+        currentSettingsTab = tabs[0].id;
+      }
+
+      const bar = document.getElementById('settings-tabs-bar');
+      bar.innerHTML = tabs.map(t => `
+        <button
+          type="button"
+          onclick="switchSettingsTab('${t.id}')"
+          class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            currentSettingsTab === t.id ? 'bg-brand text-white shadow-xs' : 'text-slate-700 hover:bg-slate-100'
+          }"
+        >
+          <i data-lucide="${t.icon}" class="w-4 h-4"></i>
+          <span>${t.label}</span>
+        </button>
+      `).join('');
+
+      document.getElementById('settings-panel-fuel').classList.toggle('hidden', currentSettingsTab !== 'fuel');
+      document.getElementById('settings-panel-rbac').classList.toggle('hidden', currentSettingsTab !== 'rbac');
+      document.getElementById('settings-panel-brand').classList.toggle('hidden', currentSettingsTab !== 'brand');
+      document.getElementById('settings-panel-backup').classList.toggle('hidden', currentSettingsTab !== 'backup');
+
+      if (currentSettingsTab === 'fuel') {
+        document.getElementById('cfg-fuel-unit-value').value = systemConfig.fuelQuotaDefaultValue.toFixed(2);
+        document.getElementById('cfg-fuel-max-quotas').value = systemConfig.fuelMaxQuotasPerTrip;
+        document.getElementById('cfg-fuel-require-note').checked = systemConfig.fuelRequireJustification;
+        renderFuelAuditHistory();
+      } else if (currentSettingsTab === 'rbac') {
+        renderRbacMatrix();
+      } else if (currentSettingsTab === 'brand') {
+        const b = systemConfig.brand;
+        document.getElementById('wl-system-name').value = b.systemName;
+        document.getElementById('wl-company-name').value = b.companyName;
+        document.getElementById('wl-cnpj').value = b.cnpj;
+        document.getElementById('wl-address').value = b.address;
+        document.getElementById('wl-contact').value = b.contact;
+        document.getElementById('wl-primary-color').value = b.primaryColor;
+      }
+
+      lucide.createIcons();
+    }
+
+    function switchSettingsTab(tabId) {
+      currentSettingsTab = tabId;
+      renderSettingsView();
+    }
+
+    function saveFuelConfig(e) {
+      e.preventDefault();
+      if (!hasPermission('config_combustivel')) {
+        showToast('Seu perfil não possui permissão para alterar parâmetros de combustível.', 'error');
+        return;
+      }
+
+      const newVal = Math.max(0, parseFloat(document.getElementById('cfg-fuel-unit-value').value || 0));
+      const newMax = Math.max(1, parseInt(document.getElementById('cfg-fuel-max-quotas').value || 10, 10));
+      const reqNote = document.getElementById('cfg-fuel-require-note').checked;
+
+      const oldVal = systemConfig.fuelQuotaDefaultValue;
+      systemConfig.fuelQuotaDefaultValue = newVal;
+      systemConfig.fuelMaxQuotasPerTrip = newMax;
+      systemConfig.fuelRequireJustification = reqNote;
+
+      systemConfig.fuelHistory.unshift({
+        date: new Date().toLocaleString('pt-BR'),
+        user: currentUser.nome,
+        role: getRoleLabel(currentUser.nivelAcesso),
+        oldValue: oldVal,
+        newValue: newVal,
+        maxQuotas: newMax
+      });
+
+      document.getElementById('header-fuel-rate').textContent = formatBRL(newVal);
+      saveStateToStorage();
+      renderFuelAuditHistory();
+      showToast(`Valor padrão do abastecimento extra atualizado para ${formatBRL(newVal)}!`, 'success');
+    }
+
+    function renderFuelAuditHistory() {
+      const tbody = document.getElementById('fuel-history-tbody');
+      tbody.innerHTML = systemConfig.fuelHistory.map(h => `
+        <tr>
+          <td class="p-3 font-mono text-slate-600">${h.date}</td>
+          <td class="p-3 font-bold text-slate-900">${h.user}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-100 font-bold text-slate-700">${h.role}</span></td>
+          <td class="p-3 text-slate-500">${formatBRL(h.oldValue)}</td>
+          <td class="p-3 font-extrabold text-amber-800">${formatBRL(h.newValue)}</td>
+          <td class="p-3 text-slate-700">${h.maxQuotas} cotas</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderRbacMatrix() {
+      const tbody = document.getElementById('rbac-matrix-tbody');
+      const roles = ['administrador', 'gestor', 'diretoria', 'usuario'];
+
+      tbody.innerHTML = PERMISSION_DEFINITIONS.map(perm => `
+        <tr class="hover:bg-slate-50/80 ${perm.key === 'config_combustivel' ? 'bg-amber-50/40' : ''}">
+          <td class="p-3.5">
+            <div class="font-bold text-slate-900">${perm.label}</div>
+            <div class="text-[10px] font-mono text-slate-400">${perm.key}</div>
+          </td>
+          ${roles.map(role => {
+            const checked = Boolean(rolePermissions[role]?.[perm.key]);
+            const lockedAdminRbac = role === 'administrador' && perm.key === 'manage_rbac';
+            return `
+              <td class="p-3.5 text-center">
+                <input
+                  type="checkbox"
+                  ${checked ? 'checked' : ''}
+                  ${lockedAdminRbac ? 'disabled' : ''}
+                  onchange="toggleRolePermission('${role}', '${perm.key}', this.checked)"
+                  class="w-4 h-4 rounded cursor-pointer accent-blue-700"
+                />
+              </td>
+            `;
+          }).join('')}
+        </tr>
+      `).join('');
+    }
+
+    function toggleRolePermission(role, permKey, isAllowed) {
+      rolePermissions[role][permKey] = isAllowed;
+      saveStateToStorage();
+      showToast(`Permissão "${permKey}" ${isAllowed ? 'liberada' : 'bloqueada'} para ${getRoleLabel(role)}.`, 'info');
+      syncShellWithUserAndPermissions();
+    }
+
+    function applyPresetColor(hex) {
+      document.getElementById('wl-primary-color').value = hex;
+    }
+
+    function handleBrandLogoUpload(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        systemConfig.brand.logoDataUrl = ev.target.result;
+        saveStateToStorage();
+        applyBrandThemeToDOM();
+        showToast('Logomarca carregada e salva localmente!', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveBrandSettings(e) {
+      e.preventDefault();
+      const b = systemConfig.brand;
+      b.systemName = document.getElementById('wl-system-name').value.trim();
+      b.companyName = document.getElementById('wl-company-name').value.trim();
+      b.cnpj = document.getElementById('wl-cnpj').value.trim();
+      b.address = document.getElementById('wl-address').value.trim();
+      b.contact = document.getElementById('wl-contact').value.trim();
+      b.primaryColor = document.getElementById('wl-primary-color').value;
+      saveStateToStorage();
+      applyBrandThemeToDOM();
+      showToast('Identidade visual atualizada e salva!', 'success');
+    }
+
+    function applyBrandThemeToDOM() {
+      const b = systemConfig.brand;
+      document.documentElement.style.setProperty('--brand-primary', b.primaryColor);
+      document.documentElement.style.setProperty('--brand-primary-hover', b.primaryColor);
+
+      document.getElementById('auth-system-name').textContent = b.systemName;
+      document.getElementById('auth-company-name').textContent = b.companyName;
+      document.getElementById('auth-company-cnpj').textContent = `CNPJ: ${b.cnpj}`;
+      document.getElementById('auth-company-address').textContent = b.address;
+
+      document.getElementById('sidebar-system-name').textContent = b.systemName;
+      document.getElementById('sidebar-company-short').textContent = b.companyName;
+
+      if (b.logoDataUrl) {
+        document.getElementById('auth-logo-container').innerHTML = `<img src="${b.logoDataUrl}" class="w-full h-full object-contain p-1" />`;
+        document.getElementById('sidebar-logo-box').innerHTML = `<img src="${b.logoDataUrl}" class="w-full h-full object-contain bg-white p-1" />`;
+      }
+    }
+
+    // =========================================================================
+    // DASHBOARD, RELATÓRIOS E CADASTROS BASE
+    // =========================================================================
+    function renderDashboard() {
+      let totalVal = 0;
+      let totalFuel = 0;
+      let approvedCount = 0;
+      let pendingCount = 0;
+
+      trips.filter(t => t.status !== 'CANCELADA').forEach(t => {
+        const fin = computeTripFinancials(t);
+        totalVal += fin.grandTotal;
+        totalFuel += fin.fuelTotal;
+        if (t.status === 'AUTORIZADA') approvedCount++;
+        if (t.status === 'AGUARDANDO_DIRETORIA') pendingCount++;
+      });
+
+      document.getElementById('dashboard-kpis').innerHTML = `
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Investimento Total</span>
+          <div class="text-2xl font-extrabold text-brand mt-1">${formatBRL(totalVal)}</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Abastecimento Extra</span>
+          <div class="text-2xl font-extrabold text-amber-700 mt-1">${formatBRL(totalFuel)}</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Diárias Autorizadas</span>
+          <div class="text-2xl font-extrabold text-emerald-700 mt-1">${approvedCount}</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Aguardando Diretoria</span>
+          <div class="text-2xl font-extrabold text-slate-900 mt-1">${pendingCount}</div>
+        </div>
+      `;
+
+      const bySector = {};
+      trips.filter(t => t.status !== 'CANCELADA').forEach(t => {
+        const ben = users.find(u => u.id === t.beneficiaryId);
+        const sec = ben?.setor || 'OUTROS';
+        bySector[sec] = (bySector[sec] || 0) + computeTripFinancials(t).grandTotal;
+      });
+      const maxSec = Math.max(1, ...Object.values(bySector));
+      document.getElementById('dashboard-sector-bars').innerHTML = Object.entries(bySector).map(([sec, val]) => `
+        <div>
+          <div class="flex justify-between text-xs font-bold mb-1"><span>${sec}</span><span>${formatBRL(val)}</span></div>
+          <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-brand rounded-full" style="width:${Math.round((val / maxSec) * 100)}%"></div>
+          </div>
+        </div>
+      `).join('');
+
+      const byCity = {};
+      trips.filter(t => t.status !== 'CANCELADA').forEach(t => {
+        t.destinations.forEach(d => {
+          const m = municipalities.find(x => x.id === d.munId);
+          if (m) byCity[m.nome] = (byCity[m.nome] || 0) + 1;
+        });
+      });
+      document.getElementById('dashboard-top-cities').innerHTML = Object.entries(byCity).map(([city, cnt]) => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+          <span class="font-bold text-slate-800">${city}</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-brand-soft text-brand font-extrabold">${cnt} viagem(ns)</span>
+        </div>
+      `).join('');
+    }
+
+    function renderReports() {
+      const s = document.getElementById('rep-start').value;
+      const e = document.getElementById('rep-end').value;
+      const st = document.getElementById('rep-status').value;
+
+      const filtered = trips.filter(t => {
+        if (s && t.startDate < s) return false;
+        if (e && t.startDate > e) return false;
+        if (st !== 'ALL' && t.status !== st) return false;
+        return true;
+      });
+
+      let sumDiarias = 0, sumFuel = 0, sumTotal = 0;
+      filtered.forEach(t => {
+        const f = computeTripFinancials(t);
+        sumDiarias += f.diariasTotal;
+        sumFuel += f.fuelTotal;
+        sumTotal += f.grandTotal;
+      });
+
+      document.getElementById('reports-summary-cards').innerHTML = `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200"><span class="text-[10px] font-bold uppercase text-slate-400">Viagens no Período</span><div class="text-xl font-extrabold mt-1">${filtered.length}</div></div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200"><span class="text-[10px] font-bold uppercase text-slate-400">Total Diárias</span><div class="text-xl font-extrabold mt-1">${formatBRL(sumDiarias)}</div></div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200"><span class="text-[10px] font-bold uppercase text-slate-400">Total Combustível</span><div class="text-xl font-extrabold text-amber-700 mt-1">${formatBRL(sumFuel)}</div></div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200"><span class="text-[10px] font-bold uppercase text-slate-400">Total Geral</span><div class="text-xl font-extrabold text-brand mt-1">${formatBRL(sumTotal)}</div></div>
+      `;
+
+      document.getElementById('reports-table-body').innerHTML = filtered.map(t => {
+        const ben = users.find(u => u.id === t.beneficiaryId);
+        const f = computeTripFinancials(t);
+        const dests = t.destinations.map(d => municipalities.find(m => m.id === d.munId)?.nome).join(', ');
+        return `
+          <tr>
+            <td class="p-3.5 font-mono font-bold">${t.codigo}</td>
+            <td class="p-3.5 font-semibold">${ben?.nome || '-'}</td>
+            <td class="p-3.5">${dests}</td>
+            <td class="p-3.5">${formatDateBR(t.startDate)}</td>
+            <td class="p-3.5 text-right">${formatBRL(f.diariasTotal)}</td>
+            <td class="p-3.5 text-right">${formatBRL(f.fuelTotal)}</td>
+            <td class="p-3.5 text-right font-extrabold text-brand">${formatBRL(f.grandTotal)}</td>
+            <td class="p-3.5 text-center font-bold">${t.status}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function exportReportsCSV() {
+      const rows = [['Codigo', 'Beneficiario', 'DataSaida', 'Diarias', 'Combustivel', 'Total', 'Status']];
+      trips.forEach(t => {
+        const ben = users.find(u => u.id === t.beneficiaryId);
+        const f = computeTripFinancials(t);
+        rows.push([t.codigo, ben?.nome || '', t.startDate, f.diariasTotal.toFixed(2), f.fuelTotal.toFixed(2), f.grandTotal.toFixed(2), t.status]);
+      });
+      const csv = rows.map(r => r.join(';')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'relatorio_diarias_sisdiarias.csv';
+      a.click();
+      showToast('CSV exportado com sucesso!', 'success');
+    }
+
+    function switchMasterDataTab(tab) {
+      currentMasterDataTab = tab;
+      document.querySelectorAll('[data-md-tab]').forEach(btn => {
+        const active = btn.getAttribute('data-md-tab') === tab;
+        btn.className = `px-4 py-2 rounded-xl text-xs font-bold transition ${active ? 'bg-brand text-white' : 'text-slate-700 hover:bg-slate-100'}`;
+      });
+
+      const container = document.getElementById('master-data-content');
+      if (tab === 'users') {
+        container.innerHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-500">
+                <tr><th class="p-3">Nome</th><th class="p-3">Login</th><th class="p-3">Setor</th><th class="p-3">Perfil</th><th class="p-3">Dados Bancários / PIX</th><th class="p-3">Status</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${users.map(u => `
+                  <tr>
+                    <td class="p-3 font-bold">${u.nome}<div class="text-[10px] text-slate-400">CPF: ${u.cpf}</div></td>
+                    <td class="p-3 font-mono">${u.login}</td>
+                    <td class="p-3">${u.setor}</td>
+                    <td class="p-3 font-bold uppercase text-brand">${u.nivelAcesso}</td>
+                    <td class="p-3">${u.banco} • Ag ${u.agencia} • Cc ${u.conta}<div class="text-[10px] font-mono text-slate-500">PIX: ${u.chavePix}</div></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else if (tab === 'municipalities') {
+        container.innerHTML = `
+          <div class="overflow-x-auto max-h-[480px]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-500 sticky top-0">
+                <tr><th class="p-3">Município (AL)</th><th class="p-3">Área</th><th class="p-3 text-right">Meia Diária</th><th class="p-3 text-right">Pernoite</th><th class="p-3 text-center">Pernoite Liberado</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${municipalities.map(m => `
+                  <tr>
+                    <td class="p-3 font-bold">${m.nome}</td>
+                    <td class="p-3">Área ${m.area}</td>
+                    <td class="p-3 text-right font-semibold">${formatBRL(m.meiaDiaria)}</td>
+                    <td class="p-3 text-right font-semibold">${formatBRL(m.pernoite)}</td>
+                    <td class="p-3 text-center">${m.permitePernoite ? 'Sim' : 'Não (Entorno)'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else if (tab === 'sectors') {
+        container.innerHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${sectors.map(s => `
+              <div class="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-800">${s.descricao}</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Ativo</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (tab === 'vehicles') {
+        container.innerHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-500">
+                <tr><th class="p-3">Marca / Modelo</th><th class="p-3">Placa</th><th class="p-3">Chassi</th><th class="p-3">Combustível</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${vehicles.map(v => `
+                  <tr>
+                    <td class="p-3 font-bold">${v.marca} ${v.modelo}</td>
+                    <td class="p-3 font-mono font-bold text-brand">${v.placa}</td>
+                    <td class="p-3 font-mono text-slate-600">${v.chassi}</td>
+                    <td class="p-3 font-semibold">${v.combustivel}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+    }
+
+    // Inicialização
+    window.addEventListener('DOMContentLoaded', () => {
+      const hadSavedData = loadStateFromStorage();
+      if (!hadSavedData) {
+        saveStateToStorage();
+      }
+      applyBrandThemeToDOM();
+      // Inicia obrigatoriamente na tela de Login restrita por usuário e senha
+      document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('app-shell').classList.add('hidden');
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
